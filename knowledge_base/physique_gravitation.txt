@@ -1,0 +1,18 @@
+# La Force de Gravitation (Loi Universelle)
+
+La loi de la gravitation universelle, formulée par Isaac Newton, explique l'attraction entre deux corps massifs.
+
+Formule :
+F = G * (m1 * m2) / d²
+
+Où :
+- F est la force d'attraction (en Newtons, N).
+- G est la constante gravitationnelle (environ 6.674 × 10^-11 N·m²/kg²).
+- m1 et m2 sont les masses des deux corps (en kilogrammes, kg).
+- d est la distance entre les centres de gravité des deux corps (en mètres, m).
+
+Interprétation :
+- Plus les corps sont massifs, plus l'attraction est forte.
+- Plus ils sont éloignés, plus l'attraction diminue (inversement proportionnelle au carré de la distance).
+
+C'est cette force qui maintient les planètes en orbite autour du Soleil et la Lune autour de la Terre.

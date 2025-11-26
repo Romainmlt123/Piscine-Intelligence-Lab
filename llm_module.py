@@ -5,14 +5,13 @@ class LLMModule:
         self.model = model
         print(f"LLM initialized with model: {self.model}")
 
-    def generate_response(self, prompt):
+    def generate_response(self, prompt, system_instruction="Tu es un professeur virtuel expert. Utilise le contexte fourni pour répondre précisément. Si la réponse n'est pas dans le contexte, dis-le."):
         try:
-            response = ollama.chat(model=self.model, messages=[
-                {
-                    'role': 'user',
-                    'content': prompt,
-                },
-            ])
+            messages = [
+                {'role': 'system', 'content': system_instruction},
+                {'role': 'user', 'content': prompt},
+            ]
+            response = ollama.chat(model=self.model, messages=messages)
             return response['message']['content']
         except Exception as e:
             print(f"Error generating response: {e}")

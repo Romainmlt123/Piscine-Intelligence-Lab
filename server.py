@@ -34,14 +34,18 @@ from vad_module import VADManager
 from stt_module import STTModule
 from llm_module import LLMModule
 from tts_module import TTSModule
+from rag_module import RAGModule
 import tempfile
-import os
 import wave
 
 # Initialize Modules
 stt = STTModule(model_size="base")
 llm = LLMModule(model="gemma:2b")
 tts = TTSModule()
+rag = RAGModule()
+
+# Ingest Knowledge Base on Startup
+rag.ingest("./knowledge_base")
 
 @app.websocket("/ws/audio")
 async def websocket_endpoint(websocket: WebSocket):
@@ -53,15 +57,13 @@ async def websocket_endpoint(websocket: WebSocket):
     try:
         while True:
             data = await websocket.receive_bytes()
-            # logger.info(f"Received chunk: {len(data)} bytes") # Too verbose for streaming
-            
             # Process chunk via VAD
             speech_segment = vad.process_chunk(data)
             
             if speech_segment:
                 logger.info(f"Speech segment detected: {len(speech_segment)} bytes")
                 
-                # 1. Save PCM to WAV (Whisper needs WAV file or specific numpy format)
+                # 1. Save PCM to WAV
                 with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp_audio:
                     with wave.open(tmp_audio.name, 'wb') as wav_file:
                         wav_file.setnchannels(1) # Mono
@@ -79,8 +81,28 @@ async def websocket_endpoint(websocket: WebSocket):
                         # Send User Text to Client
                         await websocket.send_json({"type": "user_text", "content": text})
                         
+                        # 2.5 RAG Retrieval
+                        contexts, metadatas = rag.retrieve(text, n_results=3)
+                        
+                        if contexts:
+                            logger.info(f"RAG found {len(contexts)} chunks.")
+                            combined_context = "\n\n".join(contexts)
+                            prompt = f"Contexte du cours :\n{combined_context}\n\nQuestion de l'élève : {text}"
+                            
+                            # Send Sources to Client (Loop through all chunks)
+                            for i, ctx in enumerate(contexts):
+                                source_name = metadatas[i].get('source', 'Inconnu')
+                                await websocket.send_json({
+                                    "type": "rag_sources", 
+                                    "content": ctx, 
+                                    "source": source_name
+                                })
+                        else:
+                            logger.info("No RAG context found.")
+                            prompt = text
+                        
                         # 3. LLM
-                        response_text = llm.generate_response(text)
+                        response_text = llm.generate_response(prompt)
                         logger.info(f"LLM Response: {response_text}")
                         
                         # Send AI Text to Client

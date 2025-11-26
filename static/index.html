@@ -120,6 +120,15 @@
             border-bottom-left-radius: 2px;
         }
 
+        .message.source {
+            align-self: center;
+            background-color: #2a2a2a;
+            border: 1px solid #444;
+            font-size: 0.85rem;
+            width: 90%;
+            color: #aaa;
+        }
+
         .message .meta {
             font-size: 0.75rem;
             color: rgba(255, 255, 255, 0.6);
@@ -203,6 +212,27 @@
 
         let ws;
         let isRunning = false;
+
+        function addSource(sourceName, content) {
+            const msgDiv = document.createElement('div');
+            msgDiv.classList.add('message', 'source');
+
+            const titleDiv = document.createElement('div');
+            titleDiv.style.fontWeight = 'bold';
+            titleDiv.style.marginBottom = '5px';
+            titleDiv.textContent = '📚 Source utilisée : ' + sourceName;
+            msgDiv.appendChild(titleDiv);
+
+            const contentDiv = document.createElement('div');
+            contentDiv.style.fontSize = '0.9em';
+            contentDiv.style.fontStyle = 'italic';
+            contentDiv.style.opacity = '0.8';
+            contentDiv.textContent = '"' + content.substring(0, 150) + '..."';
+            msgDiv.appendChild(contentDiv);
+
+            chatContainer.appendChild(msgDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
 
         function addMessage(text, sender) {
             const msgDiv = document.createElement('div');
@@ -288,6 +318,8 @@
                             addMessage(msg.content, 'user');
                         } else if (msg.type === 'ai_text') {
                             addMessage(msg.content, 'ai');
+                        } else if (msg.type === 'rag_sources') {
+                            addSource(msg.source, msg.content);
                         }
                     } catch (e) {
                         console.log("Received text:", event.data);
