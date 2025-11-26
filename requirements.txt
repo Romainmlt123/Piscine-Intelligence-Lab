@@ -10,3 +10,5 @@ python-dotenv>=1.0.0
 ollama>=0.1.0
 # Torch is required for Whisper
 torch>=2.0.0
+webrtcvad>=2.0.10
+pydub>=0.25.1

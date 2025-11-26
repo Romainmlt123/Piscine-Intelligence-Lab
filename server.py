@@ -30,10 +30,13 @@ from fastapi.responses import FileResponse
 async def get():
     return FileResponse("static/index.html")
 
+from vad_module import VADManager
 from stt_module import STTModule
 from llm_module import LLMModule
 from tts_module import TTSModule
 import tempfile
+import os
+import wave
 
 # Initialize Modules
 stt = STTModule(model_size="base")
@@ -44,45 +47,53 @@ tts = TTSModule()
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     logger.info("WebSocket connection accepted")
+    
+    vad = VADManager()
+    
     try:
         while True:
             data = await websocket.receive_bytes()
-            logger.info(f"Received audio data: {len(data)} bytes")
+            # logger.info(f"Received chunk: {len(data)} bytes") # Too verbose for streaming
             
-            # 1. Save audio to temp file
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".webm") as tmp_audio:
-                tmp_audio.write(data)
-                tmp_audio_path = tmp_audio.name
+            # Process chunk via VAD
+            speech_segment = vad.process_chunk(data)
             
-            try:
-                # 2. STT (Audio -> Text)
-                text = stt.transcribe(tmp_audio_path)
-                logger.info(f"Transcribed: {text}")
+            if speech_segment:
+                logger.info(f"Speech segment detected: {len(speech_segment)} bytes")
                 
-                if text.strip():
-                    # 3. LLM (Text -> Text)
-                    response_text = llm.generate_response(text)
-                    logger.info(f"LLM Response: {response_text}")
+                # 1. Save PCM to WAV (Whisper needs WAV file or specific numpy format)
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp_audio:
+                    with wave.open(tmp_audio.name, 'wb') as wav_file:
+                        wav_file.setnchannels(1) # Mono
+                        wav_file.setsampwidth(2) # 16-bit
+                        wav_file.setframerate(16000) # 16kHz
+                        wav_file.writeframes(speech_segment)
+                    tmp_audio_path = tmp_audio.name
+                
+                try:
+                    # 2. STT
+                    text = stt.transcribe(tmp_audio_path)
+                    logger.info(f"Transcribed: {text}")
                     
-                    # 4. TTS (Text -> Audio)
-                    output_audio_path = tts.generate_audio(response_text)
-                    
-                    # 5. Send Audio back
-                    with open(output_audio_path, "rb") as f:
-                        audio_response = f.read()
-                    await websocket.send_bytes(audio_response)
-                    logger.info("Sent audio response")
-                    
-                    # Cleanup output file
-                    if os.path.exists(output_audio_path):
-                        os.remove(output_audio_path)
-                else:
-                    logger.info("No speech detected")
-                    
-            finally:
-                # Cleanup input file
-                if os.path.exists(tmp_audio_path):
-                    os.remove(tmp_audio_path)
+                    if text.strip():
+                        # 3. LLM
+                        response_text = llm.generate_response(text)
+                        logger.info(f"LLM Response: {response_text}")
+                        
+                        # 4. TTS
+                        output_audio_path = tts.generate_audio(response_text)
+                        
+                        # 5. Send Audio back
+                        with open(output_audio_path, "rb") as f:
+                            audio_response = f.read()
+                        await websocket.send_bytes(audio_response)
+                        logger.info("Sent audio response")
+                        
+                        if os.path.exists(output_audio_path):
+                            os.remove(output_audio_path)
+                finally:
+                    if os.path.exists(tmp_audio_path):
+                        os.remove(tmp_audio_path)
             
     except WebSocketDisconnect:
         logger.info("WebSocket disconnected")

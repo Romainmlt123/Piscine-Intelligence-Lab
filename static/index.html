@@ -68,17 +68,22 @@
 
         startBtn.onclick = async () => {
             if (ws && ws.readyState === WebSocket.OPEN) {
-                if (mediaRecorder && mediaRecorder.state === 'recording') {
-                    mediaRecorder.stop();
-                    startBtn.textContent = "Parler";
-                    statusDiv.textContent = "En attente";
-                    log("Enregistrement terminé, traitement...");
-                } else {
-                    mediaRecorder.start();
-                    startBtn.textContent = "Arrêter";
-                    statusDiv.textContent = "En écoute";
-                    log("Enregistrement démarré...");
+                // Stop logic
+                if (window.localStream) {
+                    window.localStream.getTracks().forEach(track => track.stop());
                 }
+                if (window.localProcessor) {
+                    window.localProcessor.disconnect();
+                    window.localProcessor.onaudioprocess = null;
+                }
+                if (window.localAudioContext) {
+                    window.localAudioContext.close();
+                }
+
+                ws.close();
+                startBtn.textContent = "Démarrer";
+                statusDiv.textContent = "Arrêté";
+                log("Streaming arrêté.");
                 return;
             }
 
@@ -87,28 +92,39 @@
 
             ws.onopen = async () => {
                 log("WebSocket connecté");
-                statusDiv.textContent = "En écoute";
+                statusDiv.textContent = "En écoute (VAD Actif)";
                 startBtn.textContent = "Arrêter";
 
                 try {
                     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                    mediaRecorder = new MediaRecorder(stream);
-                    let audioChunks = [];
+                    const audioContext = new AudioContext({ sampleRate: 16000 });
+                    const source = audioContext.createMediaStreamSource(stream);
 
-                    mediaRecorder.ondataavailable = (event) => {
-                        audioChunks.push(event.data);
-                    };
+                    // ScriptProcessorNode (Deprecated but widely supported for simple PCM access)
+                    // Buffer size 4096 ~ 256ms at 16kHz
+                    const processor = audioContext.createScriptProcessor(4096, 1, 1);
 
-                    mediaRecorder.onstop = () => {
-                        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    source.connect(processor);
+                    processor.connect(audioContext.destination);
+
+                    processor.onaudioprocess = (e) => {
                         if (ws.readyState === WebSocket.OPEN) {
-                            ws.send(audioBlob);
-                            log("Audio envoyé (" + audioBlob.size + " bytes)");
+                            const inputData = e.inputBuffer.getChannelData(0);
+                            // Convert Float32 to Int16
+                            const pcmData = new Int16Array(inputData.length);
+                            for (let i = 0; i < inputData.length; i++) {
+                                let s = Math.max(-1, Math.min(1, inputData[i]));
+                                pcmData[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+                            }
+                            ws.send(pcmData.buffer);
                         }
-                        audioChunks = [];
                     };
 
-                    mediaRecorder.start();
+                    // Store reference to stop later
+                    window.localStream = stream;
+                    window.localAudioContext = audioContext;
+                    window.localProcessor = processor;
+
                 } catch (err) {
                     log("Erreur Micro: " + err);
                 }
@@ -129,7 +145,6 @@
                 log("WebSocket déconnecté");
                 statusDiv.textContent = "Déconnecté";
                 startBtn.textContent = "Démarrer";
-                if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
             };
 
             ws.onerror = (err) => {
