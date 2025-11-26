@@ -4,104 +4,248 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agent Vocal Local</title>
+    <title>Agent Vocal AI</title>
     <style>
+        :root {
+            --bg-color: #121212;
+            --chat-bg: #1e1e1e;
+            --user-msg-bg: #005c4b;
+            --ai-msg-bg: #202c33;
+            --text-color: #e9edef;
+            --accent-color: #00a884;
+        }
+
         body {
-            font-family: sans-serif;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
             display: flex;
             flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        header {
+            background-color: var(--chat-bg);
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+            z-index: 10;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 1.2rem;
+            font-weight: 500;
+        }
+
+        #status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: #555;
+            transition: background-color 0.3s, transform 0.3s;
+        }
+
+        #status-indicator.listening {
+            background-color: #ff3b30;
+            box-shadow: 0 0 10px #ff3b30;
+            animation: pulse 1.5s infinite;
+        }
+
+        #status-indicator.connected {
+            background-color: var(--accent-color);
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+                opacity: 1;
+            }
+
+            50% {
+                transform: scale(1.2);
+                opacity: 0.8;
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        #chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%23ffffff' fill-opacity='0.05' fill-rule='evenodd'/%3E%3C/svg%3E");
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 10px 15px;
+            border-radius: 10px;
+            line-height: 1.4;
+            position: relative;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.user {
+            align-self: flex-end;
+            background-color: var(--user-msg-bg);
+            border-bottom-right-radius: 2px;
+        }
+
+        .message.ai {
+            align-self: flex-start;
+            background-color: var(--ai-msg-bg);
+            border-bottom-left-radius: 2px;
+        }
+
+        .message .meta {
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.6);
+            margin-top: 5px;
+            text-align: right;
+        }
+
+        #controls {
+            background-color: var(--chat-bg);
+            padding: 15px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #mic-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: none;
+            background-color: var(--accent-color);
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            display: flex;
             align-items: center;
             justify-content: center;
-            height: 100vh;
-            background-color: #f0f0f0;
+            transition: transform 0.2s, background-color 0.2s;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
         }
 
-        button {
-            padding: 15px 30px;
-            font-size: 1.2em;
-            cursor: pointer;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 5px;
+        #mic-btn:hover {
+            transform: scale(1.05);
         }
 
-        button:disabled {
-            background-color: #ccc;
+        #mic-btn:active {
+            transform: scale(0.95);
         }
 
-        #status {
-            margin-top: 20px;
-            font-weight: bold;
+        #mic-btn.active {
+            background-color: #ff3b30;
         }
 
-        #log {
-            margin-top: 20px;
-            white-space: pre-wrap;
-            max-height: 300px;
-            overflow-y: auto;
-            width: 80%;
-            border: 1px solid #ccc;
-            padding: 10px;
-            background: white;
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #555;
+            border-radius: 3px;
         }
     </style>
 </head>
 
 <body>
-    <h1>Agent Vocal Local (WSL2)</h1>
-    <button id="startBtn">Démarrer</button>
-    <div id="status">Prêt</div>
-    <div id="log"></div>
+    <header>
+        <h1>Agent Vocal AI</h1>
+        <div id="status-indicator" title="Statut de connexion"></div>
+    </header>
+
+    <div id="chat-container">
+        <div class="message ai">
+            Bonjour ! Je suis votre assistant vocal. Appuyez sur le micro pour démarrer la conversation mains-libres.
+            <div class="meta">Assistant</div>
+        </div>
+    </div>
+
+    <div id="controls">
+        <button id="mic-btn">🎤</button>
+    </div>
 
     <script>
-        const startBtn = document.getElementById('startBtn');
-        const statusDiv = document.getElementById('status');
-        const logDiv = document.getElementById('log');
-        let ws;
-        let mediaRecorder;
+        const micBtn = document.getElementById('mic-btn');
+        const chatContainer = document.getElementById('chat-container');
+        const statusIndicator = document.getElementById('status-indicator');
 
-        function log(msg) {
-            logDiv.textContent += msg + '\n';
-            logDiv.scrollTop = logDiv.scrollHeight;
+        let ws;
+        let isRunning = false;
+
+        function addMessage(text, sender) {
+            const msgDiv = document.createElement('div');
+            msgDiv.classList.add('message', sender);
+
+            const contentDiv = document.createElement('div');
+            contentDiv.textContent = text;
+            msgDiv.appendChild(contentDiv);
+
+            const metaDiv = document.createElement('div');
+            metaDiv.classList.add('meta');
+            metaDiv.textContent = sender === 'user' ? 'Vous' : 'Assistant';
+            msgDiv.appendChild(metaDiv);
+
+            chatContainer.appendChild(msgDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
         }
 
-        startBtn.onclick = async () => {
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                // Stop logic
-                if (window.localStream) {
-                    window.localStream.getTracks().forEach(track => track.stop());
-                }
-                if (window.localProcessor) {
-                    window.localProcessor.disconnect();
-                    window.localProcessor.onaudioprocess = null;
-                }
-                if (window.localAudioContext) {
-                    window.localAudioContext.close();
-                }
-
-                ws.close();
-                startBtn.textContent = "Démarrer";
-                statusDiv.textContent = "Arrêté";
-                log("Streaming arrêté.");
-                return;
+        function toggleConnection() {
+            if (isRunning) {
+                stopConnection();
+            } else {
+                startConnection();
             }
+        }
 
-            statusDiv.textContent = "Connexion...";
+        function startConnection() {
+            statusIndicator.className = ''; // Reset
+
             ws = new WebSocket('ws://' + window.location.hostname + ':8001/ws/audio');
 
             ws.onopen = async () => {
-                log("WebSocket connecté");
-                statusDiv.textContent = "En écoute (VAD Actif)";
-                startBtn.textContent = "Arrêter";
+                console.log("Connected");
+                statusIndicator.classList.add('connected');
+                statusIndicator.classList.add('listening'); // Assume listening immediately
+                micBtn.classList.add('active');
+                micBtn.textContent = '⏹️';
+                isRunning = true;
 
                 try {
                     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                     const audioContext = new AudioContext({ sampleRate: 16000 });
                     const source = audioContext.createMediaStreamSource(stream);
-
-                    // ScriptProcessorNode (Deprecated but widely supported for simple PCM access)
-                    // Buffer size 4096 ~ 256ms at 16kHz
                     const processor = audioContext.createScriptProcessor(4096, 1, 1);
 
                     source.connect(processor);
@@ -110,7 +254,6 @@
                     processor.onaudioprocess = (e) => {
                         if (ws.readyState === WebSocket.OPEN) {
                             const inputData = e.inputBuffer.getChannelData(0);
-                            // Convert Float32 to Int16
                             const pcmData = new Int16Array(inputData.length);
                             for (let i = 0; i < inputData.length; i++) {
                                 let s = Math.max(-1, Math.min(1, inputData[i]));
@@ -120,38 +263,71 @@
                         }
                     };
 
-                    // Store reference to stop later
                     window.localStream = stream;
                     window.localAudioContext = audioContext;
                     window.localProcessor = processor;
 
                 } catch (err) {
-                    log("Erreur Micro: " + err);
+                    console.error("Mic Error:", err);
+                    stopConnection();
+                    addMessage("Erreur d'accès au microphone.", 'ai');
                 }
             };
 
             ws.onmessage = (event) => {
+                // Check if binary (audio) or text (json)
                 if (event.data instanceof Blob) {
-                    log("Audio reçu (" + event.data.size + " bytes)");
+                    console.log("Audio received");
                     const audioUrl = URL.createObjectURL(event.data);
                     const audio = new Audio(audioUrl);
                     audio.play();
                 } else {
-                    log("Reçu: " + event.data);
+                    try {
+                        const msg = JSON.parse(event.data);
+                        if (msg.type === 'user_text') {
+                            addMessage(msg.content, 'user');
+                        } else if (msg.type === 'ai_text') {
+                            addMessage(msg.content, 'ai');
+                        }
+                    } catch (e) {
+                        console.log("Received text:", event.data);
+                    }
                 }
             };
 
             ws.onclose = () => {
-                log("WebSocket déconnecté");
-                statusDiv.textContent = "Déconnecté";
-                startBtn.textContent = "Démarrer";
+                console.log("Disconnected");
+                stopConnection();
             };
 
             ws.onerror = (err) => {
-                log("Erreur WebSocket");
-                console.error(err);
+                console.error("WS Error", err);
+                stopConnection();
             };
-        };
+        }
+
+        function stopConnection() {
+            isRunning = false;
+            micBtn.classList.remove('active');
+            micBtn.textContent = '🎤';
+            statusIndicator.className = '';
+
+            if (window.localStream) {
+                window.localStream.getTracks().forEach(track => track.stop());
+            }
+            if (window.localProcessor) {
+                window.localProcessor.disconnect();
+                window.localProcessor.onaudioprocess = null;
+            }
+            if (window.localAudioContext) {
+                window.localAudioContext.close();
+            }
+            if (ws) {
+                ws.close();
+            }
+        }
+
+        micBtn.onclick = toggleConnection;
     </script>
 </body>
 

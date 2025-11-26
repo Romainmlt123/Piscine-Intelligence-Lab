@@ -76,9 +76,15 @@ async def websocket_endpoint(websocket: WebSocket):
                     logger.info(f"Transcribed: {text}")
                     
                     if text.strip():
+                        # Send User Text to Client
+                        await websocket.send_json({"type": "user_text", "content": text})
+                        
                         # 3. LLM
                         response_text = llm.generate_response(text)
                         logger.info(f"LLM Response: {response_text}")
+                        
+                        # Send AI Text to Client
+                        await websocket.send_json({"type": "ai_text", "content": response_text})
                         
                         # 4. TTS
                         output_audio_path = tts.generate_audio(response_text)
