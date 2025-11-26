@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Vocal Local</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+        }
+
+        button {
+            padding: 15px 30px;
+            font-size: 1.2em;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+
+        button:disabled {
+            background-color: #ccc;
+        }
+
+        #status {
+            margin-top: 20px;
+            font-weight: bold;
+        }
+
+        #log {
+            margin-top: 20px;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+            width: 80%;
+            border: 1px solid #ccc;
+            padding: 10px;
+            background: white;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Agent Vocal Local (WSL2)</h1>
+    <button id="startBtn">Démarrer</button>
+    <div id="status">Prêt</div>
+    <div id="log"></div>
+
+    <script>
+        const startBtn = document.getElementById('startBtn');
+        const statusDiv = document.getElementById('status');
+        const logDiv = document.getElementById('log');
+        let ws;
+        let mediaRecorder;
+
+        function log(msg) {
+            logDiv.textContent += msg + '\n';
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        startBtn.onclick = async () => {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                if (mediaRecorder && mediaRecorder.state === 'recording') {
+                    mediaRecorder.stop();
+                    startBtn.textContent = "Parler";
+                    statusDiv.textContent = "En attente";
+                    log("Enregistrement terminé, traitement...");
+                } else {
+                    mediaRecorder.start();
+                    startBtn.textContent = "Arrêter";
+                    statusDiv.textContent = "En écoute";
+                    log("Enregistrement démarré...");
+                }
+                return;
+            }
+
+            statusDiv.textContent = "Connexion...";
+            ws = new WebSocket('ws://' + window.location.hostname + ':8001/ws/audio');
+
+            ws.onopen = async () => {
+                log("WebSocket connecté");
+                statusDiv.textContent = "En écoute";
+                startBtn.textContent = "Arrêter";
+
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    mediaRecorder = new MediaRecorder(stream);
+                    let audioChunks = [];
+
+                    mediaRecorder.ondataavailable = (event) => {
+                        audioChunks.push(event.data);
+                    };
+
+                    mediaRecorder.onstop = () => {
+                        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                        if (ws.readyState === WebSocket.OPEN) {
+                            ws.send(audioBlob);
+                            log("Audio envoyé (" + audioBlob.size + " bytes)");
+                        }
+                        audioChunks = [];
+                    };
+
+                    mediaRecorder.start();
+                } catch (err) {
+                    log("Erreur Micro: " + err);
+                }
+            };
+
+            ws.onmessage = (event) => {
+                if (event.data instanceof Blob) {
+                    log("Audio reçu (" + event.data.size + " bytes)");
+                    const audioUrl = URL.createObjectURL(event.data);
+                    const audio = new Audio(audioUrl);
+                    audio.play();
+                } else {
+                    log("Reçu: " + event.data);
+                }
+            };
+
+            ws.onclose = () => {
+                log("WebSocket déconnecté");
+                statusDiv.textContent = "Déconnecté";
+                startBtn.textContent = "Démarrer";
+                if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+            };
+
+            ws.onerror = (err) => {
+                log("Erreur WebSocket");
+                console.error(err);
+            };
+        };
+    </script>
+</body>
+
+</html>
