@@ -4,13 +4,13 @@ import os
 import glob
 
 class RAGModule:
-    def __init__(self, persistence_path="./chroma_db"):
-        print("Initializing RAG Module...")
+    def __init__(self, collection_name="knowledge_base", persistence_path="./chroma_db"):
+        print(f"Initializing RAG Module ({collection_name})...")
         self.client = chromadb.PersistentClient(path=persistence_path)
-        self.collection = self.client.get_or_create_collection(name="knowledge_base")
+        self.collection = self.client.get_or_create_collection(name=collection_name)
         # Use a lightweight model for local embedding
         self.embedder = SentenceTransformer('all-MiniLM-L6-v2')
-        print("RAG Module initialized.")
+        print(f"RAG Module ({collection_name}) initialized.")
 
     def ingest(self, directory_path):
         """Reads all .txt files in the directory and adds them to the vector store."""

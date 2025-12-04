@@ -136,6 +136,29 @@
             text-align: right;
         }
 
+        .agent-badge {
+            display: inline-block;
+            font-size: 0.7rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background-color: #555;
+            color: white;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .metrics-container {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+            font-size: 0.7rem;
+            color: #888;
+            margin: 5px 0 15px 0;
+            padding: 5px;
+            border-top: 1px solid #333;
+        }
+
         #controls {
             background-color: var(--chat-bg);
             padding: 15px;
@@ -213,14 +236,38 @@
         let ws;
         let isRunning = false;
 
-        function addSource(sourceName, content) {
+        function addMetrics(metrics) {
+            const msgDiv = document.createElement('div');
+            msgDiv.classList.add('metrics-container');
+
+            const items = [
+                { label: '⏱️ STT', value: metrics.stt },
+                { label: '🧠 Route', value: metrics.routing },
+                { label: '📚 RAG', value: metrics.rag },
+                { label: '🤖 LLM', value: metrics.llm },
+                { label: '🗣️ TTS', value: metrics.tts },
+                { label: '⚡ Total', value: metrics.total, bold: true }
+            ];
+
+            items.forEach(item => {
+                const span = document.createElement('span');
+                span.textContent = `${item.label}: ${item.value.toFixed(2)}s`;
+                if (item.bold) span.style.fontWeight = 'bold';
+                msgDiv.appendChild(span);
+            });
+
+            chatContainer.appendChild(msgDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function addSource(sourceName, content, agentName) {
             const msgDiv = document.createElement('div');
             msgDiv.classList.add('message', 'source');
 
             const titleDiv = document.createElement('div');
             titleDiv.style.fontWeight = 'bold';
             titleDiv.style.marginBottom = '5px';
-            titleDiv.textContent = '📚 Source utilisée : ' + sourceName;
+            titleDiv.textContent = '📚 Source (' + agentName + ') : ' + sourceName;
             msgDiv.appendChild(titleDiv);
 
             const contentDiv = document.createElement('div');
@@ -234,9 +281,19 @@
             chatContainer.scrollTop = chatContainer.scrollHeight;
         }
 
-        function addMessage(text, sender) {
+        function addMessage(text, sender, agentName) {
             const msgDiv = document.createElement('div');
             msgDiv.classList.add('message', sender);
+
+            // Agent Badge
+            if (sender === 'ai' && agentName) {
+                const badge = document.createElement('span');
+                badge.classList.add('agent-badge');
+                badge.textContent = agentName;
+                if (agentName.includes('Math')) badge.style.backgroundColor = '#007bff';
+                if (agentName.includes('Physique')) badge.style.backgroundColor = '#6f42c1';
+                msgDiv.appendChild(badge);
+            }
 
             const contentDiv = document.createElement('div');
             contentDiv.textContent = text;
@@ -317,9 +374,11 @@
                         if (msg.type === 'user_text') {
                             addMessage(msg.content, 'user');
                         } else if (msg.type === 'ai_text') {
-                            addMessage(msg.content, 'ai');
+                            addMessage(msg.content, 'ai', msg.agent);
                         } else if (msg.type === 'rag_sources') {
-                            addSource(msg.source, msg.content);
+                            addSource(msg.source, msg.content, msg.agent);
+                        } else if (msg.type === 'latency_metrics') {
+                            addMetrics(msg.metrics);
                         }
                     } catch (e) {
                         console.log("Received text:", event.data);

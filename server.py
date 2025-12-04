@@ -32,20 +32,19 @@ async def get():
 
 from vad_module import VADManager
 from stt_module import STTModule
-from llm_module import LLMModule
 from tts_module import TTSModule
-from rag_module import RAGModule
+from orchestrator import AgentOrchestrator
 import tempfile
 import wave
 
 # Initialize Modules
 stt = STTModule(model_size="base")
-llm = LLMModule(model="gemma:2b")
 tts = TTSModule()
-rag = RAGModule()
+orchestrator = AgentOrchestrator()
 
-# Ingest Knowledge Base on Startup
-rag.ingest("./knowledge_base")
+import time
+
+# ... imports ...
 
 @app.websocket("/ws/audio")
 async def websocket_endpoint(websocket: WebSocket):
@@ -62,6 +61,7 @@ async def websocket_endpoint(websocket: WebSocket):
             
             if speech_segment:
                 logger.info(f"Speech segment detected: {len(speech_segment)} bytes")
+                start_total = time.time()
                 
                 # 1. Save PCM to WAV
                 with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp_audio:
@@ -74,48 +74,59 @@ async def websocket_endpoint(websocket: WebSocket):
                 
                 try:
                     # 2. STT
+                    start_stt = time.time()
                     text = stt.transcribe(tmp_audio_path)
-                    logger.info(f"Transcribed: {text}")
+                    stt_duration = time.time() - start_stt
+                    logger.info(f"Transcribed: {text} ({stt_duration:.2f}s)")
                     
                     if text.strip():
                         # Send User Text to Client
                         await websocket.send_json({"type": "user_text", "content": text})
                         
-                        # 2.5 RAG Retrieval
-                        contexts, metadatas = rag.retrieve(text, n_results=3)
+                        # 3. Orchestrator Process (Routing + RAG + LLM)
+                        response_text, source_name, agent_name, context, metrics = orchestrator.process(text)
+                        logger.info(f"Agent: {agent_name} | Response: {response_text}")
                         
-                        if contexts:
-                            logger.info(f"RAG found {len(contexts)} chunks.")
-                            combined_context = "\n\n".join(contexts)
-                            prompt = f"Contexte du cours :\n{combined_context}\n\nQuestion de l'élève : {text}"
-                            
-                            # Send Sources to Client (Loop through all chunks)
-                            for i, ctx in enumerate(contexts):
-                                source_name = metadatas[i].get('source', 'Inconnu')
-                                await websocket.send_json({
-                                    "type": "rag_sources", 
-                                    "content": ctx, 
-                                    "source": source_name
-                                })
-                        else:
-                            logger.info("No RAG context found.")
-                            prompt = text
-                        
-                        # 3. LLM
-                        response_text = llm.generate_response(prompt)
-                        logger.info(f"LLM Response: {response_text}")
+                        # Send Sources & Agent Info to Client
+                        if context:
+                             await websocket.send_json({
+                                "type": "rag_sources", 
+                                "content": context, 
+                                "source": source_name,
+                                "agent": agent_name
+                            })
                         
                         # Send AI Text to Client
-                        await websocket.send_json({"type": "ai_text", "content": response_text})
+                        await websocket.send_json({
+                            "type": "ai_text", 
+                            "content": response_text,
+                            "agent": agent_name
+                        })
                         
                         # 4. TTS
+                        start_tts = time.time()
                         output_audio_path = tts.generate_audio(response_text)
+                        tts_duration = time.time() - start_tts
+                        logger.info(f"TTS Generation: {tts_duration:.2f}s")
                         
                         # 5. Send Audio back
                         with open(output_audio_path, "rb") as f:
                             audio_response = f.read()
                         await websocket.send_bytes(audio_response)
                         logger.info("Sent audio response")
+                        
+                        # Send Latency Metrics
+                        total_duration = time.time() - start_total
+                        logger.info(f"Total Pipeline Latency: {total_duration:.2f}s")
+                        metrics.update({
+                            'stt': stt_duration,
+                            'tts': tts_duration,
+                            'total': total_duration
+                        })
+                        await websocket.send_json({
+                            "type": "latency_metrics",
+                            "metrics": metrics
+                        })
                         
                         if os.path.exists(output_audio_path):
                             os.remove(output_audio_path)
