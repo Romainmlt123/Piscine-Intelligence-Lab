@@ -1,15 +1,13 @@
 #!/bin/bash
-# Start Ollama server in background if not running
-if ! pgrep -x "ollama" > /dev/null
-then
-    echo "Starting Ollama..."
-    ollama serve &
-    sleep 5
-fi
 
-# Activate venv
+# Voice Agent Startup Script
+
+# Activate virtual environment
 source venv/bin/activate
 
-# Run server
+# Set Python path to include src
+export PYTHONPATH="${PYTHONPATH}:$(pwd)/src"
+
+# Start the server
 echo "Starting Voice Agent Server..."
-python server.py
+python src/main.py

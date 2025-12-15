@@ -1,12 +1,18 @@
 import chromadb
 from sentence_transformers import SentenceTransformer
 import os
+import sys
 import glob
+from pathlib import Path
+
+# Add parent to path for config import
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from config import CHROMA_DB_DIR
 
 class RAGModule:
-    def __init__(self, collection_name="knowledge_base", persistence_path="./chroma_db"):
+    def __init__(self, collection_name="knowledge_base", persistence_path=None):
         print(f"Initializing RAG Module ({collection_name})...")
-        self.client = chromadb.PersistentClient(path=persistence_path)
+        self.client = chromadb.PersistentClient(path=persistence_path or CHROMA_DB_DIR)
         self.collection = self.client.get_or_create_collection(name=collection_name)
         # Use a lightweight model for local embedding
         self.embedder = SentenceTransformer('all-MiniLM-L6-v2')

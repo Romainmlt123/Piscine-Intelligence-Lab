@@ -1,8 +1,41 @@
-venv/
+# Python
 __pycache__/
-*.pyc
-.env
-.DS_Store
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+.venv/
+*.egg-info/
+dist/
+build/
+
+# Data directories
+data/chroma_db/
+data/logs/
+
+# Models (large files)
+models/piper/
+
+# Audio files
 *.wav
-*.webm
-chroma_db/
+*.mp3
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment
+.env
+.env.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temp files
+tmp_*.wav
+chunk_*.wav

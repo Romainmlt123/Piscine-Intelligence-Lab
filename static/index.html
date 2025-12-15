@@ -138,13 +138,29 @@
 
         .agent-badge {
             display: inline-block;
-            font-size: 0.7rem;
+            font-size: 0.65rem;
             padding: 2px 6px;
             border-radius: 4px;
             background-color: #555;
             color: white;
             margin-bottom: 5px;
             font-weight: bold;
+        }
+
+        .agent-badge.math-badge {
+            background-color: #3498db;
+        }
+
+        .agent-badge.physics-badge {
+            background-color: #e74c3c;
+        }
+
+        .agent-badge.english-badge {
+            background-color: #27ae60;
+        }
+
+        .agent-badge.general-badge {
+            background-color: #9b59b6;
         }
 
         .metrics-container {
@@ -244,16 +260,18 @@
                 { label: '⏱️ STT', value: metrics.stt },
                 { label: '🧠 Route', value: metrics.routing },
                 { label: '📚 RAG', value: metrics.rag },
+                { label: '🚀 TTFA', value: metrics.ttfa, bold: true }, // Time To First Audio
                 { label: '🤖 LLM', value: metrics.llm },
-                { label: '🗣️ TTS', value: metrics.tts },
-                { label: '⚡ Total', value: metrics.total, bold: true }
+                { label: '⚡ Total', value: metrics.total }
             ];
 
             items.forEach(item => {
-                const span = document.createElement('span');
-                span.textContent = `${item.label}: ${item.value.toFixed(2)}s`;
-                if (item.bold) span.style.fontWeight = 'bold';
-                msgDiv.appendChild(span);
+                if (item.value !== undefined) {
+                    const span = document.createElement('span');
+                    span.textContent = `${item.label}: ${item.value.toFixed(2)}s`;
+                    if (item.bold) span.style.fontWeight = 'bold';
+                    msgDiv.appendChild(span);
+                }
             });
 
             chatContainer.appendChild(msgDiv);
@@ -281,30 +299,44 @@
             chatContainer.scrollTop = chatContainer.scrollHeight;
         }
 
-        function addMessage(text, sender, agentName) {
-            const msgDiv = document.createElement('div');
-            msgDiv.classList.add('message', sender);
+        let currentAIMessageDiv = null; // To hold the div for streaming AI responses
+        let currentModelName = null;    // Current model being used
 
-            // Agent Badge
+        function addMessage(text, sender, agentName = null, modelName = null) {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message', sender);
+
+            let contentHtml = `<span class="content">${text}</span>`;
             if (sender === 'ai' && agentName) {
-                const badge = document.createElement('span');
-                badge.classList.add('agent-badge');
-                badge.textContent = agentName;
-                if (agentName.includes('Math')) badge.style.backgroundColor = '#007bff';
-                if (agentName.includes('Physique')) badge.style.backgroundColor = '#6f42c1';
-                msgDiv.appendChild(badge);
+                let badgeClass = 'general-badge';
+                if (agentName === 'MATH') badgeClass = 'math-badge';
+                else if (agentName === 'PHYSICS') badgeClass = 'physics-badge';
+                else if (agentName === 'ENGLISH') badgeClass = 'english-badge';
+
+                const modelLabel = modelName ? ` (${modelName})` : '';
+                contentHtml = `<span class="agent-badge ${badgeClass}">${agentName}${modelLabel}</span> ` + contentHtml;
             }
 
-            const contentDiv = document.createElement('div');
-            contentDiv.textContent = text;
-            msgDiv.appendChild(contentDiv);
+            messageDiv.innerHTML = contentHtml;
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+            return messageDiv;
+        }
 
-            const metaDiv = document.createElement('div');
-            metaDiv.classList.add('meta');
-            metaDiv.textContent = sender === 'user' ? 'Vous' : 'Assistant';
-            msgDiv.appendChild(metaDiv);
-
-            chatContainer.appendChild(msgDiv);
+        function updateCurrentAIMessage(chunk, agentName = null, modelName = null) {
+            if (!currentAIMessageDiv) {
+                currentAIMessageDiv = addMessage(chunk, 'ai', agentName, modelName);
+                currentModelName = modelName;
+            } else {
+                // Find the content span and append the chunk
+                const contentSpan = currentAIMessageDiv.querySelector('.content');
+                if (contentSpan) {
+                    contentSpan.textContent += chunk;
+                } else {
+                    // If for some reason content span is missing, just append to the div
+                    currentAIMessageDiv.textContent += chunk;
+                }
+            }
             chatContainer.scrollTop = chatContainer.scrollHeight;
         }
 
@@ -361,24 +393,145 @@
                 }
             };
 
+            // ========================================
+            // AUDIO PLAYER CLASS - Sequential Playback
+            // ========================================
+            class AudioPlayer {
+                constructor() {
+                    this.queue = [];              // Buffer of {index, blob}
+                    this.nextExpectedIndex = 0;   // Next index to play
+                    this.isPlaying = false;
+                    this.currentAudio = null;
+                }
+
+                reset() {
+                    console.log("AudioPlayer: resetting");
+                    if (this.currentAudio) {
+                        this.currentAudio.pause();
+                        this.currentAudio = null;
+                    }
+                    this.queue = [];
+                    this.nextExpectedIndex = 0;
+                    this.isPlaying = false;
+                }
+
+                enqueue(index, blob) {
+                    console.log(`AudioPlayer: enqueue index=${index}`);
+                    this.queue.push({ index, blob });
+                    // Sort by index to ensure order
+                    this.queue.sort((a, b) => a.index - b.index);
+                    this.tryPlayNext();
+                }
+
+                async tryPlayNext() {
+                    // Already playing something
+                    if (this.isPlaying) {
+                        console.log("AudioPlayer: already playing, will continue later");
+                        return;
+                    }
+
+                    // Find the chunk with the expected index
+                    const nextChunk = this.queue.find(c => c.index === this.nextExpectedIndex);
+                    if (!nextChunk) {
+                        console.log(`AudioPlayer: waiting for index=${this.nextExpectedIndex}, have: ${this.queue.map(c => c.index).join(',')}`);
+                        return;
+                    }
+
+                    // Remove it from queue
+                    this.queue = this.queue.filter(c => c.index !== nextChunk.index);
+
+                    this.isPlaying = true;
+
+                    try {
+                        console.log(`AudioPlayer: playing index=${nextChunk.index}`);
+                        await this.playBlob(nextChunk.blob);
+                        console.log(`AudioPlayer: finished index=${nextChunk.index}`);
+                    } catch (e) {
+                        console.error(`AudioPlayer: error playing index=${nextChunk.index}`, e);
+                    } finally {
+                        this.isPlaying = false;
+                        this.nextExpectedIndex++;
+                        // Try to play next chunk
+                        this.tryPlayNext();
+                    }
+                }
+
+                playBlob(blob) {
+                    return new Promise((resolve, reject) => {
+                        const url = URL.createObjectURL(blob);
+                        const audio = new Audio(url);
+                        this.currentAudio = audio;
+
+                        audio.onended = () => {
+                            URL.revokeObjectURL(url);
+                            this.currentAudio = null;
+                            resolve();
+                        };
+
+                        audio.onerror = (e) => {
+                            URL.revokeObjectURL(url);
+                            this.currentAudio = null;
+                            reject(e);
+                        };
+
+                        audio.play().catch((e) => {
+                            URL.revokeObjectURL(url);
+                            this.currentAudio = null;
+                            reject(e);
+                        });
+                    });
+                }
+            }
+
+            const audioPlayer = new AudioPlayer();
+            let pendingAudioIndex = null;  // To pair metadata with blob
+
             ws.onmessage = (event) => {
-                // Check if binary (audio) or text (json)
+                // Binary data = audio blob
                 if (event.data instanceof Blob) {
-                    console.log("Audio received");
-                    const audioUrl = URL.createObjectURL(event.data);
-                    const audio = new Audio(audioUrl);
-                    audio.play();
+                    if (pendingAudioIndex !== null) {
+                        audioPlayer.enqueue(pendingAudioIndex, event.data);
+                        pendingAudioIndex = null;
+                    } else {
+                        console.warn("Received audio blob without metadata");
+                        // Fallback: assume next index
+                        audioPlayer.enqueue(audioPlayer.nextExpectedIndex + audioPlayer.queue.length, event.data);
+                    }
                 } else {
                     try {
                         const msg = JSON.parse(event.data);
-                        if (msg.type === 'user_text') {
+
+                        if (msg.type === 'audio_reset') {
+                            // New response starting, reset the player
+                            audioPlayer.reset();
+                            pendingAudioIndex = null;
+
+                        } else if (msg.type === 'audio_chunk_meta') {
+                            // Next blob will have this index
+                            pendingAudioIndex = msg.index;
+                            console.log(`Expecting audio chunk index=${msg.index}: "${msg.text}"`);
+
+                        } else if (msg.type === 'user_text') {
                             addMessage(msg.content, 'user');
+                            currentAIMessageDiv = null;
+
                         } else if (msg.type === 'ai_text') {
-                            addMessage(msg.content, 'ai', msg.agent);
+                            if (currentAIMessageDiv) {
+                                const contentSpan = currentAIMessageDiv.querySelector('.content');
+                                if (contentSpan) contentSpan.textContent = msg.content;
+                            } else {
+                                addMessage(msg.content, 'ai', msg.agent, msg.model);
+                            }
+                            currentAIMessageDiv = null;
+
+                        } else if (msg.type === 'ai_text_chunk') {
+                            updateCurrentAIMessage(msg.content, msg.agent, msg.model);
+
                         } else if (msg.type === 'rag_sources') {
                             addSource(msg.source, msg.content, msg.agent);
+
                         } else if (msg.type === 'latency_metrics') {
-                            addMetrics(msg.metrics);
+                            addMetrics(msg.data);
                         }
                     } catch (e) {
                         console.log("Received text:", event.data);

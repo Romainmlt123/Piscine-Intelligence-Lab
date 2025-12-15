@@ -3,8 +3,9 @@ import collections
 import sys
 
 class VADManager:
-    def __init__(self, sample_rate=16000, frame_duration_ms=30, padding_duration_ms=300):
-        self.vad = webrtcvad.Vad(3) # Aggressiveness mode 3 (High)
+    def __init__(self, sample_rate=16000, frame_duration_ms=30, padding_duration_ms=600):
+        # Aggressiveness: 0-3, lower = less aggressive (captures more speech)
+        self.vad = webrtcvad.Vad(2)  # Mode 2 (Medium-High)
         self.sample_rate = sample_rate
         self.frame_duration_ms = frame_duration_ms
         self.frame_size = int(sample_rate * frame_duration_ms / 1000 * 2) # 2 bytes per sample (16-bit)

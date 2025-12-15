@@ -1,41 +1,83 @@
-# Agent Vocal Local - Migration WSL2
+# 🎓 Voice Agent - Professeur IA Vocal
 
-Ce projet a été migré vers WSL2 pour assurer la compatibilité WebSocket et améliorer les performances.
+Un assistant vocal intelligent avec RAG multi-agent et TTS streaming.
 
-## Prérequis
-- WSL2 (Ubuntu)
-- Python 3.10+
-- Ollama (installé via `curl https://ollama.ai/install.sh | sh`)
+## 🚀 Fonctionnalités
 
-## Installation
-Si ce n'est pas déjà fait, installez les dépendances :
-```bash
-./install_deps.sh  # (Si créé) ou
-pip install -r requirements.txt
+- **Multi-Agent RAG** : Agents spécialisés (Math, Physics, English) avec routing intelligent
+- **Multi-Modèle** : LLM différent par matière (Qwen, Llama, Gemma)
+- **Streaming TTS** : Réponse audio progressive avec Piper
+- **Math-to-Speech** : Conversion des équations en texte parlé
+- **Faible latence** : TTFA optimisé (~15-25s sur CPU)
+
+## 📁 Structure du projet
+
 ```
-*Note: L'installation de Torch peut prendre du temps.*
+├── src/                    # Code source
+│   ├── main.py             # Point d'entrée FastAPI
+│   ├── config.py           # Configuration centralisée
+│   ├── agents/             # Orchestrateur et LLM
+│   ├── rag/                # Module RAG (ChromaDB)
+│   └── speech/             # STT, TTS, VAD, Math-to-Speech
+├── static/                 # Frontend (index.html)
+├── knowledge_base/         # Documents RAG
+├── models/                 # Modèles (Piper TTS)
+├── data/                   # Runtime (ChromaDB, logs)
+├── docs/                   # Documentation
+└── tests/                  # Tests
+```
 
-## Démarrage Rapide
-Un script de démarrage est fourni pour lancer Ollama et le serveur en une seule commande :
+## ⚙️ Installation
 
 ```bash
-chmod +x start.sh
+# Cloner le repo
+git clone <repo-url>
+cd voice-agent
+
+# Créer l'environnement virtuel
+python3 -m venv venv
+source venv/bin/activate
+
+# Installer les dépendances
+pip install -r requirements.txt
+
+# Configurer (optionnel)
+cp .env.example .env
+# Éditer .env selon vos besoins
+```
+
+## 🏃 Démarrage
+
+```bash
 ./start.sh
 ```
 
-## Vérification
-Pour tester la connexion WebSocket indépendamment :
+Puis ouvrir http://localhost:8001
+
+## 🧠 Modèles requis
+
+### Ollama (LLM)
 ```bash
-python test_websocket.py
+ollama pull qwen2.5:1.5b
+ollama pull llama3.2:1b
+ollama pull gemma:2b
 ```
 
-## Utilisation
-1. Lancez le serveur (`./start.sh`).
-2. Ouvrez votre navigateur Windows à l'adresse : `http://localhost:8001` (L'interface s'affichera directement).
-3. Cliquez sur "Démarrer" et parlez.
+### Piper (TTS)
+Télécharger depuis https://github.com/rhasspy/piper/releases et placer dans `models/piper/`
 
-## Structure
-- `server.py`: Serveur FastAPI + WebSocket.
-- `llm_module.py`: Interface avec Ollama.
-- `stt_module.py`: Transcription avec Whisper.
-- `tts_module.py`: Synthèse vocale (Piper/Fallback).
+## 📊 Configuration
+
+Voir `.env.example` pour toutes les options :
+- Modèles LLM par matière
+- Agressivité VAD
+- Paramètres de streaming
+
+## 📖 Documentation
+
+- [CHANGELOG v1.4.0](docs/CHANGELOG_v1.4.0.md) - Historique des modifications
+- [Choix des modèles](docs/model_choices.md) - Justification des LLM
+
+## 📝 License
+
+MIT
