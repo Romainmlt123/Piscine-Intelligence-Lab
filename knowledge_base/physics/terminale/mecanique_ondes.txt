@@ -1,0 +1,42 @@
+# Physique - Terminale
+
+## Mécanique
+
+### Lois de Newton
+1. Principe d'inertie : Un corps persévère dans son mouvement si aucune force ne s'exerce sur lui
+2. Principe fondamental : ∑F = m × a (la somme des forces = masse × accélération)
+3. Principe des actions réciproques : F(A/B) = -F(B/A)
+
+### Énergie mécanique
+- Énergie cinétique : Ec = ½mv²
+- Énergie potentielle de pesanteur : Ep = mgh
+- Énergie mécanique : Em = Ec + Ep
+
+### Conservation de l'énergie
+Dans un système isolé, l'énergie mécanique se conserve :
+Em(initial) = Em(final)
+
+## Ondes
+
+### Caractéristiques d'une onde
+- Période T : durée d'un cycle (en secondes)
+- Fréquence f : nombre de cycles par seconde (en Hertz)
+- f = 1/T
+
+### Longueur d'onde
+λ = v × T = v/f
+où v est la célérité de l'onde
+
+### Diffraction
+Quand une onde rencontre un obstacle ou une ouverture de dimension proche de sa longueur d'onde, elle se diffracte.
+
+## Physique quantique
+
+### Dualité onde-corpuscule
+La lumière présente une double nature :
+- Ondulatoire : interférences, diffraction
+- Corpusculaire : effet photoélectrique
+
+### Énergie d'un photon
+E = h × f
+où h = 6.63 × 10^-34 J.s (constante de Planck)

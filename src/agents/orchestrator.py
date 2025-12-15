@@ -198,48 +198,80 @@ class AgentOrchestrator:
             
         yield ('routing', {'agent': agent_name, 'model': model_name})
         
-        # 2. RAG Retrieval
+        # 2. RAG Retrieval (now with 5 chunks for more context)
         start_rag = time.time()
         context = ""
         source_name = "Aucune source"
+        chunks_details = []  # For frontend display
+        
+        N_RESULTS = 5  # Increased from 3 to 5
         
         if subject == "MATH":
-            context, metadata = self.rag_math.retrieve(text)
+            context_list, metadata = self.rag_math.retrieve(text, n_results=N_RESULTS)
             system_prompt = "Tu es un professeur de Mathématiques. Sois CONCIS. Utilise des phrases COURTES. Va droit au but."
         elif subject == "PHYSICS":
-            context, metadata = self.rag_physics.retrieve(text)
+            context_list, metadata = self.rag_physics.retrieve(text, n_results=N_RESULTS)
             system_prompt = "Tu es un professeur de Physique. Sois CONCIS. Utilise des phrases COURTES. Va droit au but."
         elif subject == "ENGLISH":
-            context, metadata = self.rag_english.retrieve(text)
+            context_list, metadata = self.rag_english.retrieve(text, n_results=N_RESULTS)
             system_prompt = "Tu es un professeur d'Anglais. Sois CONCIS. Utilise des phrases COURTES. Donne des exemples."
         else:
-            context = ""
-            metadata = {}
+            context_list = []
+            metadata = []
             system_prompt = "Tu es un assistant. Sois CONCIS. Utilise des phrases COURTES. Va droit au but."
+        
+        # Process retrieved chunks
+        if context_list:
+            # Build context string
+            context = "\n\n---\n\n".join(context_list) if isinstance(context_list, list) else context_list
             
-        if context:
-            # Handle list of sources if multiple chunks
+            # Build source names and chunk details for logging
             if isinstance(metadata, list):
-                source_name = ", ".join([m.get('source', 'Inconnu') for m in metadata])
+                source_name = ", ".join(set([m.get('source', 'Inconnu') for m in metadata]))
+                for i, (chunk, meta) in enumerate(zip(context_list, metadata)):
+                    chunk_info = {
+                        'index': i + 1,
+                        'source': meta.get('source', 'Inconnu'),
+                        'level': meta.get('level', 'unknown'),
+                        'preview': chunk[:200] + "..." if len(chunk) > 200 else chunk
+                    }
+                    chunks_details.append(chunk_info)
+                    print(f"  📄 Chunk {i+1}: [{meta.get('level', '?')}/{meta.get('source', '?')}] {chunk[:100]}...")
             else:
-                source_name = metadata.get('source', 'Inconnu')
+                source_name = metadata.get('source', 'Inconnu') if metadata else 'Inconnu'
         
         metrics['rag'] = time.time() - start_rag
-        yield ('rag', {'context': context, 'source': source_name})
+        metrics['chunks_count'] = len(chunks_details)
+        print(f"  ✅ RAG: {len(chunks_details)} chunks retrieved in {metrics['rag']:.2f}s")
+        
+        # Yield RAG info with chunk details for frontend
+        yield ('rag', {
+            'context': context, 
+            'source': source_name,
+            'chunks': chunks_details,
+            'chunks_count': len(chunks_details)
+        })
         
         # 3. LLM Generation (Streaming)
         if context:
             full_prompt = f"Contexte du cours :\n{context}\n\nQuestion : {text}"
         else:
             full_prompt = text
-            
+        
+        print(f"  🤖 LLM: Starting generation with {model_name}...")
         start_llm = time.time()
+        token_count = 0
         
         # Stream tokens using the subject-specific LLM
         for chunk in llm.generate_response_stream(full_prompt, system_instruction=system_prompt):
+            token_count += 1
             yield ('llm_chunk', chunk)
-            
+        
         metrics['llm'] = time.time() - start_llm
         metrics['model'] = model_name
+        metrics['tokens'] = token_count
+        print(f"  ✅ LLM: Generated {token_count} tokens in {metrics['llm']:.2f}s")
+        
         yield ('metrics', metrics)
+
 

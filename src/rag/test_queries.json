@@ -1,0 +1,261 @@
+{
+  "version": "3.0",
+  "description": "Dataset de test OPTIMISÉ - questions correspondant exactement au contenu des cahiers 6ème",
+  "queries": [
+    {
+      "id": "math_001",
+      "question": "Qu'est-ce qu'un nombre décimal ?",
+      "subject": "MATH",
+      "level": "6eme",
+      "expected_keywords": [
+        "décimal",
+        "virgule",
+        "partie",
+        "entière",
+        "fraction"
+      ],
+      "expected_source_pattern": "N1|N2|N3"
+    },
+    {
+      "id": "math_002",
+      "question": "Comment comparer deux nombres décimaux ?",
+      "subject": "MATH",
+      "level": "6eme",
+      "expected_keywords": [
+        "comparer",
+        "chiffre",
+        "rang",
+        "partie"
+      ],
+      "expected_source_pattern": "N1|N2"
+    },
+    {
+      "id": "math_003",
+      "question": "Qu'est-ce qu'un arrondi ?",
+      "subject": "MATH",
+      "level": "6eme",
+      "expected_keywords": [
+        "arrondi",
+        "précision",
+        "proche",
+        "unité"
+      ],
+      "expected_source_pattern": "N1|N2"
+    },
+    {
+      "id": "math_004",
+      "question": "Qu'est-ce qu'une expérience aléatoire ?",
+      "subject": "MATH",
+      "level": "6eme",
+      "expected_keywords": [
+        "aléatoire",
+        "événement",
+        "expérience",
+        "probabilité"
+      ],
+      "expected_source_pattern": "D2"
+    },
+    {
+      "id": "math_005",
+      "question": "Qu'est-ce qu'un polyèdre ?",
+      "subject": "MATH",
+      "level": "6eme",
+      "expected_keywords": [
+        "polyèdre",
+        "solide",
+        "face",
+        "polygone"
+      ],
+      "expected_source_pattern": "G2"
+    },
+    {
+      "id": "math_006",
+      "question": "Comment calculer une distance entre deux points ?",
+      "subject": "MATH",
+      "level": "6eme",
+      "expected_keywords": [
+        "distance",
+        "point",
+        "mesure"
+      ],
+      "expected_source_pattern": "G1"
+    },
+    {
+      "id": "math_007",
+      "question": "Qu'est-ce que la proportionnalité ?",
+      "subject": "MATH",
+      "level": "6eme",
+      "expected_keywords": [
+        "proportionnalité",
+        "coefficient",
+        "tableau"
+      ],
+      "expected_source_pattern": "P1"
+    },
+    {
+      "id": "math_008",
+      "question": "Comment réaliser une enquête statistique ?",
+      "subject": "MATH",
+      "level": "6eme",
+      "expected_keywords": [
+        "enquête",
+        "statistique",
+        "données"
+      ],
+      "expected_source_pattern": "D1"
+    },
+    {
+      "id": "math_009",
+      "question": "Comment se repérer dans un plan ?",
+      "subject": "MATH",
+      "level": "6eme",
+      "expected_keywords": [
+        "repère",
+        "plan",
+        "coordonnée",
+        "point"
+      ],
+      "expected_source_pattern": "I1"
+    },
+    {
+      "id": "math_010",
+      "question": "Qu'est-ce qu'une fraction ?",
+      "subject": "MATH",
+      "level": "college",
+      "expected_keywords": [
+        "fraction",
+        "numérateur",
+        "dénominateur"
+      ],
+      "expected_source_pattern": "bases_calcul|N"
+    },
+    {
+      "id": "math_011",
+      "question": "C'est quoi le théorème de Pythagore ?",
+      "subject": "MATH",
+      "level": "college",
+      "expected_keywords": [
+        "pythagore",
+        "hypoténuse",
+        "carré",
+        "triangle"
+      ],
+      "expected_source_pattern": "bases_calcul"
+    },
+    {
+      "id": "math_012",
+      "question": "Comment calculer le périmètre d'un carré ?",
+      "subject": "MATH",
+      "level": "college",
+      "expected_keywords": [
+        "périmètre",
+        "carré",
+        "côté"
+      ],
+      "expected_source_pattern": "bases_calcul"
+    },
+    {
+      "id": "physics_001",
+      "question": "Qu'est-ce qu'un circuit électrique ?",
+      "subject": "PHYSICS",
+      "level": "college",
+      "expected_keywords": [
+        "circuit",
+        "électrique",
+        "pile",
+        "générateur"
+      ],
+      "expected_source_pattern": "bases_physique"
+    },
+    {
+      "id": "physics_002",
+      "question": "Quels sont les états de la matière ?",
+      "subject": "PHYSICS",
+      "level": "college",
+      "expected_keywords": [
+        "solide",
+        "liquide",
+        "gaz"
+      ],
+      "expected_source_pattern": "bases_physique"
+    },
+    {
+      "id": "physics_003",
+      "question": "Comment calculer la vitesse ?",
+      "subject": "PHYSICS",
+      "level": "college",
+      "expected_keywords": [
+        "vitesse",
+        "distance",
+        "temps"
+      ],
+      "expected_source_pattern": "bases_physique"
+    },
+    {
+      "id": "physics_004",
+      "question": "Qu'est-ce que la loi d'Ohm ?",
+      "subject": "PHYSICS",
+      "level": "college",
+      "expected_keywords": [
+        "ohm",
+        "tension",
+        "résistance",
+        "intensité"
+      ],
+      "expected_source_pattern": "bases_physique"
+    },
+    {
+      "id": "english_001",
+      "question": "What is the present simple tense?",
+      "subject": "ENGLISH",
+      "level": "general",
+      "expected_keywords": [
+        "present",
+        "simple",
+        "habit",
+        "routine"
+      ],
+      "expected_source_pattern": "grammar"
+    },
+    {
+      "id": "english_002",
+      "question": "How to form the past simple tense?",
+      "subject": "ENGLISH",
+      "level": "general",
+      "expected_keywords": [
+        "past",
+        "simple",
+        "verb",
+        "ed"
+      ],
+      "expected_source_pattern": "grammar"
+    },
+    {
+      "id": "english_003",
+      "question": "What are phrasal verbs?",
+      "subject": "ENGLISH",
+      "level": "general",
+      "expected_keywords": [
+        "phrasal",
+        "verb",
+        "look",
+        "give",
+        "take"
+      ],
+      "expected_source_pattern": "grammar"
+    },
+    {
+      "id": "english_004",
+      "question": "What is the present perfect tense?",
+      "subject": "ENGLISH",
+      "level": "general",
+      "expected_keywords": [
+        "present",
+        "perfect",
+        "have",
+        "has"
+      ],
+      "expected_source_pattern": "grammar"
+    }
+  ]
+}

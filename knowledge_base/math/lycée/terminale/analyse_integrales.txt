@@ -1,0 +1,44 @@
+# Mathématiques - Terminale
+
+## Analyse
+
+### Limites de fonctions
+- Limite finie en un point : lim(x→a) f(x) = L
+- Limite infinie : lim(x→+∞) f(x) = +∞
+- Formes indéterminées : 0/0, ∞/∞, 0×∞, ∞-∞
+
+### Continuité
+Une fonction f est continue en a si :
+lim(x→a) f(x) = f(a)
+
+### Dérivation
+- Dérivée de x^n : n × x^(n-1)
+- Dérivée de e^x : e^x
+- Dérivée de ln(x) : 1/x
+- Dérivée de sin(x) : cos(x)
+- Dérivée de cos(x) : -sin(x)
+
+### Intégration
+L'intégrale est l'opération inverse de la dérivation.
+∫ f(x)dx = F(x) + C où F'(x) = f(x)
+
+Primitives usuelles :
+- ∫ x^n dx = x^(n+1)/(n+1) + C (n ≠ -1)
+- ∫ e^x dx = e^x + C
+- ∫ 1/x dx = ln|x| + C
+
+### Calcul d'aires
+L'aire entre une courbe et l'axe des x sur [a,b] :
+A = ∫[a,b] f(x)dx
+
+## Probabilités
+
+### Loi normale
+La loi normale N(μ, σ²) est caractérisée par :
+- μ : espérance (moyenne)
+- σ : écart-type
+- Courbe en cloche symétrique
+
+### Intervalle de confiance
+Pour un niveau de confiance de 95% :
+IC = [p̂ - 1.96×√(p̂(1-p̂)/n) ; p̂ + 1.96×√(p̂(1-p̂)/n)]

@@ -1,0 +1,41 @@
+# Physique-Chimie - Collège (6ème - 3ème)
+
+## L'électricité
+
+### Le circuit électrique
+Un circuit électrique simple comprend :
+- Un générateur (pile, batterie)
+- Des fils conducteurs
+- Un ou plusieurs récepteurs (lampe, moteur)
+- Un interrupteur
+
+### Tension et Intensité
+- La tension se mesure en Volts (V) avec un voltmètre
+- L'intensité se mesure en Ampères (A) avec un ampèremètre
+- Loi d'Ohm : U = R × I (Tension = Résistance × Intensité)
+
+## La matière
+
+### Les états de la matière
+- Solide : forme propre, volume propre
+- Liquide : pas de forme propre, volume propre
+- Gaz : pas de forme propre, pas de volume propre
+
+### Les changements d'état
+- Fusion : solide → liquide (glace → eau)
+- Solidification : liquide → solide (eau → glace)
+- Vaporisation : liquide → gaz (eau → vapeur)
+- Condensation : gaz → liquide (vapeur → eau)
+
+## Le mouvement
+
+### Vitesse
+La vitesse moyenne se calcule par :
+v = d / t
+- v : vitesse en m/s ou km/h
+- d : distance parcourue
+- t : durée du trajet
+
+### Conversion
+1 m/s = 3.6 km/h
+Pour convertir km/h en m/s : diviser par 3.6

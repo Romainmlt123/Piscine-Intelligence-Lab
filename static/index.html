@@ -278,22 +278,52 @@
             chatContainer.scrollTop = chatContainer.scrollHeight;
         }
 
-        function addSource(sourceName, content, agentName) {
+        function addSource(sourceName, content, agentName, chunks = [], chunksCount = 0) {
             const msgDiv = document.createElement('div');
             msgDiv.classList.add('message', 'source');
 
             const titleDiv = document.createElement('div');
             titleDiv.style.fontWeight = 'bold';
             titleDiv.style.marginBottom = '5px';
-            titleDiv.textContent = '📚 Source (' + agentName + ') : ' + sourceName;
+            titleDiv.textContent = `📚 RAG (${agentName}) : ${chunksCount} chunks from ${sourceName}`;
             msgDiv.appendChild(titleDiv);
 
-            const contentDiv = document.createElement('div');
-            contentDiv.style.fontSize = '0.9em';
-            contentDiv.style.fontStyle = 'italic';
-            contentDiv.style.opacity = '0.8';
-            contentDiv.textContent = '"' + content.substring(0, 150) + '..."';
-            msgDiv.appendChild(contentDiv);
+            // Display each chunk if available
+            if (chunks && chunks.length > 0) {
+                const chunksContainer = document.createElement('div');
+                chunksContainer.style.fontSize = '0.85em';
+                chunksContainer.style.marginTop = '8px';
+
+                chunks.forEach((chunk, idx) => {
+                    const chunkDiv = document.createElement('div');
+                    chunkDiv.style.padding = '6px 8px';
+                    chunkDiv.style.marginBottom = '4px';
+                    chunkDiv.style.backgroundColor = 'rgba(255,255,255,0.05)';
+                    chunkDiv.style.borderRadius = '4px';
+                    chunkDiv.style.borderLeft = '3px solid var(--accent-color)';
+
+                    const levelBadge = chunk.level ? `[${chunk.level}]` : '';
+                    chunkDiv.innerHTML = `
+                        <div style="font-weight:bold; color:#00a884; margin-bottom:3px;">
+                            📄 Chunk ${chunk.index} ${levelBadge} - ${chunk.source || 'unknown'}
+                        </div>
+                        <div style="opacity:0.8; font-style:italic;">
+                            "${chunk.preview}"
+                        </div>
+                    `;
+                    chunksContainer.appendChild(chunkDiv);
+                });
+
+                msgDiv.appendChild(chunksContainer);
+            } else {
+                // Fallback to old display if no chunks detail
+                const contentDiv = document.createElement('div');
+                contentDiv.style.fontSize = '0.9em';
+                contentDiv.style.fontStyle = 'italic';
+                contentDiv.style.opacity = '0.8';
+                contentDiv.textContent = '"' + (content ? content.substring(0, 150) : '') + '..."';
+                msgDiv.appendChild(contentDiv);
+            }
 
             chatContainer.appendChild(msgDiv);
             chatContainer.scrollTop = chatContainer.scrollHeight;
@@ -528,7 +558,7 @@
                             updateCurrentAIMessage(msg.content, msg.agent, msg.model);
 
                         } else if (msg.type === 'rag_sources') {
-                            addSource(msg.source, msg.content, msg.agent);
+                            addSource(msg.source, msg.content, msg.agent, msg.chunks || [], msg.chunks_count || 0);
 
                         } else if (msg.type === 'latency_metrics') {
                             addMetrics(msg.data);

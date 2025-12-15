@@ -116,19 +116,26 @@ async def websocket_endpoint(websocket: WebSocket):
                                     # New format: {'agent': ..., 'model': ...}
                                     agent_name = event_data['agent']
                                     model_name = event_data['model']
-                                    logger.info(f"Routing: {agent_name} -> Model: {model_name}")
+                                    logger.info(f"🎯 Routing: {agent_name} -> Model: {model_name}")
                                     
                                 elif event_type == 'rag':
                                     context = event_data['context']
                                     source_name = event_data['source']
-                                    if context:
-                                        await websocket.send_json({
-                                            "type": "rag_sources", 
-                                            "content": context, 
-                                            "source": source_name,
-                                            "agent": agent_name,
-                                            "model": model_name
-                                        })
+                                    chunks = event_data.get('chunks', [])
+                                    chunks_count = event_data.get('chunks_count', 0)
+                                    
+                                    logger.info(f"📚 RAG: {chunks_count} chunks from {source_name}")
+                                    
+                                    # Send RAG info with chunk details to frontend
+                                    await websocket.send_json({
+                                        "type": "rag_sources", 
+                                        "content": context, 
+                                        "source": source_name,
+                                        "agent": agent_name,
+                                        "model": model_name,
+                                        "chunks": chunks,
+                                        "chunks_count": chunks_count
+                                    })
                                         
                                 elif event_type == 'llm_chunk':
                                     token = event_data
@@ -145,6 +152,7 @@ async def websocket_endpoint(websocket: WebSocket):
                                     # Buffer text until sentence boundary
                                     sentence = sentence_buffer.add(token)
                                     if sentence:
+                                        logger.info(f"🔊 TTS Queue: '{sentence[:60]}...' " if len(sentence) > 60 else f"🔊 TTS Queue: '{sentence}'")
                                         audio_manager.add_text(sentence)
                                     
                                     # Check for available audio and send it
@@ -154,6 +162,7 @@ async def websocket_endpoint(websocket: WebSocket):
                                             break
                                         
                                         # Send audio with index for ordered playback
+                                        logger.info(f"🎵 Audio sent: chunk #{chunk.index}")
                                         await websocket.send_json({
                                             "type": "audio_chunk_meta",
                                             "index": chunk.index,
@@ -164,7 +173,7 @@ async def websocket_endpoint(websocket: WebSocket):
                                         if not first_audio_sent:
                                             ttfa = time.time() - start_total
                                             first_audio_sent = True
-                                            logger.info(f"TTFA: {ttfa:.2f}s")
+                                            logger.info(f"⚡ TTFA: {ttfa:.2f}s")
                                         
                                 elif event_type == 'metrics':
                                     # Store metrics, will send at end

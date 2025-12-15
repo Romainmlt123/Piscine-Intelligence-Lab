@@ -1,0 +1,40 @@
+# Mathématiques - Collège (6ème - 3ème)
+
+## Nombres et Calculs
+
+### Les opérations de base
+- Addition : a + b
+- Soustraction : a - b  
+- Multiplication : a × b
+- Division : a ÷ b
+
+### Les fractions
+Une fraction représente une partie d'un tout.
+- Numérateur : nombre au-dessus de la barre
+- Dénominateur : nombre en dessous de la barre
+- Exemple : 3/4 signifie 3 parts sur 4
+
+### Calcul avec les fractions
+- Addition : a/b + c/b = (a+c)/b (même dénominateur)
+- Multiplication : a/b × c/d = (a×c)/(b×d)
+
+## Géométrie
+
+### Les figures de base
+- Triangle : 3 côtés, somme des angles = 180°
+- Carré : 4 côtés égaux, 4 angles droits
+- Rectangle : 4 angles droits, côtés opposés égaux
+- Cercle : ensemble des points à égale distance du centre
+
+### Périmètre et Aire
+- Périmètre du carré : P = 4 × côté
+- Aire du carré : A = côté²
+- Périmètre du rectangle : P = 2 × (longueur + largeur)
+- Aire du rectangle : A = longueur × largeur
+- Périmètre du cercle : P = 2 × π × rayon
+- Aire du cercle : A = π × rayon²
+
+### Le théorème de Pythagore
+Dans un triangle rectangle :
+Le carré de l'hypoténuse est égal à la somme des carrés des deux autres côtés.
+a² + b² = c² (où c est l'hypoténuse)
