@@ -4,216 +4,353 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agent Vocal AI</title>
+    <title>Tuteur IA - Assistant Éducatif</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-color: #121212;
-            --chat-bg: #1e1e1e;
-            --user-msg-bg: #005c4b;
-            --ai-msg-bg: #202c33;
-            --text-color: #e9edef;
-            --accent-color: #00a884;
+            --bg-primary: #343541;
+            --bg-secondary: #444654;
+            --bg-sidebar: #202123;
+            --text-primary: #ececf1;
+            --text-secondary: #c5c5d2;
+            --accent: #10a37f;
+            --accent-hover: #1a7f64;
+            --border: #4e4f60;
+            --user-bg: #343541;
+            --ai-bg: #444654;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
 
         body {
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            margin: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            height: 100vh;
             display: flex;
             flex-direction: column;
-            height: 100vh;
-            overflow: hidden;
         }
 
-        header {
-            background-color: var(--chat-bg);
-            padding: 15px 20px;
+        /* Header */
+        .header {
+            background: var(--bg-sidebar);
+            border-bottom: 1px solid var(--border);
+            padding: 12px 16px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-            z-index: 10;
         }
 
-        h1 {
-            margin: 0;
-            font-size: 1.2rem;
-            font-weight: 500;
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
 
-        #status-indicator {
-            width: 12px;
-            height: 12px;
+        .logo {
+            width: 32px;
+            height: 32px;
+            background: var(--accent);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .header-title {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .model-badge {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
             border-radius: 50%;
-            background-color: #555;
-            transition: background-color 0.3s, transform 0.3s;
+            background: #666;
+            transition: all 0.3s;
         }
 
-        #status-indicator.listening {
-            background-color: #ff3b30;
-            box-shadow: 0 0 10px #ff3b30;
+        .status-dot.connected {
+            background: var(--accent);
+        }
+
+        .status-dot.listening {
+            background: #ef4444;
             animation: pulse 1.5s infinite;
         }
 
-        #status-indicator.connected {
-            background-color: var(--accent-color);
-        }
-
         @keyframes pulse {
-            0% {
+
+            0%,
+            100% {
                 transform: scale(1);
                 opacity: 1;
             }
 
             50% {
-                transform: scale(1.2);
-                opacity: 0.8;
-            }
-
-            100% {
-                transform: scale(1);
-                opacity: 1;
+                transform: scale(1.3);
+                opacity: 0.7;
             }
         }
 
-        #chat-container {
+        /* Chat Container */
+        .chat-container {
             flex: 1;
             overflow-y: auto;
-            padding: 20px;
+            padding-bottom: 140px;
+        }
+
+        /* Message Row - ChatGPT Style */
+        .message-row {
+            padding: 24px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .message-row.user {
+            background: var(--user-bg);
+        }
+
+        .message-row.ai {
+            background: var(--ai-bg);
+        }
+
+        .message-content {
+            max-width: 768px;
+            margin: 0 auto;
+            padding: 0 24px;
             display: flex;
-            flex-direction: column;
-            gap: 15px;
-            background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%23ffffff' fill-opacity='0.05' fill-rule='evenodd'/%3E%3C/svg%3E");
+            gap: 16px;
         }
 
-        .message {
-            max-width: 80%;
-            padding: 10px 15px;
-            border-radius: 10px;
-            line-height: 1.4;
-            position: relative;
-            animation: fadeIn 0.3s ease;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .message.user {
-            align-self: flex-end;
-            background-color: var(--user-msg-bg);
-            border-bottom-right-radius: 2px;
-        }
-
-        .message.ai {
-            align-self: flex-start;
-            background-color: var(--ai-msg-bg);
-            border-bottom-left-radius: 2px;
-        }
-
-        .message.source {
-            align-self: center;
-            background-color: #2a2a2a;
-            border: 1px solid #444;
-            font-size: 0.85rem;
-            width: 90%;
-            color: #aaa;
-        }
-
-        .message .meta {
-            font-size: 0.75rem;
-            color: rgba(255, 255, 255, 0.6);
-            margin-top: 5px;
-            text-align: right;
-        }
-
-        .agent-badge {
-            display: inline-block;
-            font-size: 0.65rem;
-            padding: 2px 6px;
+        /* Avatars */
+        .avatar {
+            width: 36px;
+            height: 36px;
             border-radius: 4px;
-            background-color: #555;
-            color: white;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-
-        .agent-badge.math-badge {
-            background-color: #3498db;
-        }
-
-        .agent-badge.physics-badge {
-            background-color: #e74c3c;
-        }
-
-        .agent-badge.english-badge {
-            background-color: #27ae60;
-        }
-
-        .agent-badge.general-badge {
-            background-color: #9b59b6;
-        }
-
-        .metrics-container {
             display: flex;
-            gap: 10px;
+            align-items: center;
             justify-content: center;
-            flex-wrap: wrap;
-            font-size: 0.7rem;
-            color: #888;
-            margin: 5px 0 15px 0;
-            padding: 5px;
-            border-top: 1px solid #333;
+            font-size: 16px;
+            flex-shrink: 0;
         }
 
-        #controls {
-            background-color: var(--chat-bg);
-            padding: 15px;
+        .avatar.user-avatar {
+            background: #5436DA;
+        }
+
+        .avatar.ai-avatar {
+            background: var(--accent);
+        }
+
+        /* Message Text */
+        .message-text {
+            flex: 1;
+            line-height: 1.7;
+            font-size: 15px;
+        }
+
+        .message-text .agent-tag {
+            display: inline-block;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin-right: 8px;
+            text-transform: uppercase;
+        }
+
+        .agent-tag.math {
+            background: #3b82f6;
+        }
+
+        .agent-tag.physics {
+            background: #ef4444;
+        }
+
+        .agent-tag.english {
+            background: #22c55e;
+        }
+
+        .agent-tag.general {
+            background: #8b5cf6;
+        }
+
+        /* RAG Sources */
+        .rag-sources {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-top: 12px;
+            border-left: 3px solid var(--accent);
+        }
+
+        .rag-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .rag-chunk {
+            font-size: 13px;
+            color: var(--text-secondary);
+            padding: 8px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 4px;
+            margin-top: 6px;
+            font-style: italic;
+        }
+
+        /* Metrics */
+        .metrics-row {
+            max-width: 768px;
+            margin: 8px auto;
+            padding: 0 24px;
+            display: flex;
+            gap: 16px;
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        .metric-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* Input Area */
+        .input-container {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(transparent, var(--bg-primary) 50%);
+            padding: 24px;
+        }
+
+        .input-wrapper {
+            max-width: 768px;
+            margin: 0 auto;
             display: flex;
             justify-content: center;
             align-items: center;
+            gap: 16px;
         }
 
         #mic-btn {
-            width: 60px;
-            height: 60px;
+            width: 64px;
+            height: 64px;
             border-radius: 50%;
             border: none;
-            background-color: var(--accent-color);
+            background: var(--accent);
             color: white;
-            font-size: 24px;
+            font-size: 28px;
             cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 20px rgba(16, 163, 127, 0.4);
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: transform 0.2s, background-color 0.2s;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
         }
 
         #mic-btn:hover {
+            background: var(--accent-hover);
             transform: scale(1.05);
         }
 
-        #mic-btn:active {
-            transform: scale(0.95);
+        #mic-btn.active {
+            background: #ef4444;
+            box-shadow: 0 4px 20px rgba(239, 68, 68, 0.4);
+            animation: pulse-btn 1.5s infinite;
         }
 
-        #mic-btn.active {
-            background-color: #ff3b30;
+        @keyframes pulse-btn {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.1);
+            }
+        }
+
+        .input-hint {
+            text-align: center;
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 12px;
+        }
+
+        /* Welcome Message */
+        .welcome-message {
+            max-width: 600px;
+            margin: 80px auto;
+            text-align: center;
+            padding: 24px;
+        }
+
+        .welcome-icon {
+            width: 64px;
+            height: 64px;
+            background: var(--accent);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            margin: 0 auto 24px;
+        }
+
+        .welcome-title {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .welcome-subtitle {
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        .subject-cards {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin-top: 24px;
+            flex-wrap: wrap;
+        }
+
+        .subject-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
         }
 
         /* Scrollbar */
         ::-webkit-scrollbar {
-            width: 6px;
+            width: 8px;
         }
 
         ::-webkit-scrollbar-track {
@@ -221,153 +358,173 @@
         }
 
         ::-webkit-scrollbar-thumb {
-            background: #555;
-            border-radius: 3px;
+            background: var(--border);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #666;
         }
     </style>
 </head>
 
 <body>
-    <header>
-        <h1>Agent Vocal AI</h1>
-        <div id="status-indicator" title="Statut de connexion"></div>
-    </header>
+    <!-- Header -->
+    <div class="header">
+        <div class="header-left">
+            <div class="logo">🎓</div>
+            <span class="header-title">Tuteur IA</span>
+            <span class="model-badge" id="model-badge">Assistant</span>
+        </div>
+        <div class="status-dot" id="status-dot" title="Statut"></div>
+    </div>
 
-    <div id="chat-container">
-        <div class="message ai">
-            Bonjour ! Je suis votre assistant vocal. Appuyez sur le micro pour démarrer la conversation mains-libres.
-            <div class="meta">Assistant</div>
+    <!-- Chat -->
+    <div class="chat-container" id="chat-container">
+        <div class="welcome-message" id="welcome-message">
+            <div class="welcome-icon">🎓</div>
+            <h1 class="welcome-title">Comment puis-je vous aider ?</h1>
+            <p class="welcome-subtitle">
+                Je suis votre assistant éducatif vocal. Appuyez sur le micro et posez votre question en maths, physique
+                ou anglais.
+            </p>
+            <div class="subject-cards">
+                <div class="subject-card"><span>📐</span> Maths</div>
+                <div class="subject-card"><span>⚡</span> Physique</div>
+                <div class="subject-card"><span>🇬🇧</span> Anglais</div>
+            </div>
         </div>
     </div>
 
-    <div id="controls">
-        <button id="mic-btn">🎤</button>
+    <!-- Input -->
+    <div class="input-container">
+        <div class="input-wrapper">
+            <button id="mic-btn">🎤</button>
+        </div>
+        <p class="input-hint">Cliquez pour commencer à parler</p>
     </div>
 
     <script>
         const micBtn = document.getElementById('mic-btn');
         const chatContainer = document.getElementById('chat-container');
-        const statusIndicator = document.getElementById('status-indicator');
+        const statusDot = document.getElementById('status-dot');
+        const modelBadge = document.getElementById('model-badge');
+        const welcomeMessage = document.getElementById('welcome-message');
 
         let ws;
         let isRunning = false;
+        let currentMessageRow = null;
+        let hasMessages = false;
 
-        function addMetrics(metrics) {
-            const msgDiv = document.createElement('div');
-            msgDiv.classList.add('metrics-container');
+        function hideWelcome() {
+            if (!hasMessages && welcomeMessage) {
+                welcomeMessage.style.display = 'none';
+                hasMessages = true;
+            }
+        }
 
-            const items = [
-                { label: '⏱️ STT', value: metrics.stt },
-                { label: '🧠 Route', value: metrics.routing },
-                { label: '📚 RAG', value: metrics.rag },
-                { label: '🚀 TTFA', value: metrics.ttfa, bold: true }, // Time To First Audio
-                { label: '🤖 LLM', value: metrics.llm },
-                { label: '⚡ Total', value: metrics.total }
-            ];
+        function addMessage(text, sender, agentName = null, modelName = null) {
+            hideWelcome();
 
-            items.forEach(item => {
-                if (item.value !== undefined) {
-                    const span = document.createElement('span');
-                    span.textContent = `${item.label}: ${item.value.toFixed(2)}s`;
-                    if (item.bold) span.style.fontWeight = 'bold';
-                    msgDiv.appendChild(span);
+            const row = document.createElement('div');
+            row.classList.add('message-row', sender);
+
+            const content = document.createElement('div');
+            content.classList.add('message-content');
+
+            const avatar = document.createElement('div');
+            avatar.classList.add('avatar', sender === 'user' ? 'user-avatar' : 'ai-avatar');
+            avatar.textContent = sender === 'user' ? '👤' : '🎓';
+
+            const textDiv = document.createElement('div');
+            textDiv.classList.add('message-text');
+
+            if (sender === 'ai' && agentName) {
+                const tag = document.createElement('span');
+                tag.classList.add('agent-tag', agentName.toLowerCase());
+                // Show agent name + model name in the badge
+                tag.textContent = modelName ? `${agentName} • ${modelName}` : agentName;
+                textDiv.appendChild(tag);
+
+                if (modelName) {
+                    modelBadge.textContent = `${agentName} • ${modelName}`;
                 }
-            });
+            }
 
-            chatContainer.appendChild(msgDiv);
+            const textSpan = document.createElement('span');
+            textSpan.classList.add('text-content');
+            textSpan.textContent = text;
+            textDiv.appendChild(textSpan);
+
+            content.appendChild(avatar);
+            content.appendChild(textDiv);
+            row.appendChild(content);
+            chatContainer.appendChild(row);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+
+            return row;
+        }
+
+        function updateCurrentAIMessage(chunk, agentName = null, modelName = null) {
+            if (!currentMessageRow) {
+                currentMessageRow = addMessage('', 'ai', agentName, modelName);
+            }
+
+            const textContent = currentMessageRow.querySelector('.text-content');
+            if (textContent) {
+                textContent.textContent += chunk;
+            }
             chatContainer.scrollTop = chatContainer.scrollHeight;
         }
 
         function addSource(sourceName, content, agentName, chunks = [], chunksCount = 0) {
-            const msgDiv = document.createElement('div');
-            msgDiv.classList.add('message', 'source');
+            if (!currentMessageRow) return;
 
-            const titleDiv = document.createElement('div');
-            titleDiv.style.fontWeight = 'bold';
-            titleDiv.style.marginBottom = '5px';
-            titleDiv.textContent = `📚 RAG (${agentName}) : ${chunksCount} chunks from ${sourceName}`;
-            msgDiv.appendChild(titleDiv);
+            const textDiv = currentMessageRow.querySelector('.message-text');
+            if (!textDiv) return;
 
-            // Display each chunk if available
+            const ragDiv = document.createElement('div');
+            ragDiv.classList.add('rag-sources');
+
+            const header = document.createElement('div');
+            header.classList.add('rag-header');
+            header.innerHTML = `📚 <strong>${chunksCount} sources</strong> from ${sourceName}`;
+            ragDiv.appendChild(header);
+
             if (chunks && chunks.length > 0) {
-                const chunksContainer = document.createElement('div');
-                chunksContainer.style.fontSize = '0.85em';
-                chunksContainer.style.marginTop = '8px';
-
-                chunks.forEach((chunk, idx) => {
+                chunks.slice(0, 3).forEach(chunk => {
                     const chunkDiv = document.createElement('div');
-                    chunkDiv.style.padding = '6px 8px';
-                    chunkDiv.style.marginBottom = '4px';
-                    chunkDiv.style.backgroundColor = 'rgba(255,255,255,0.05)';
-                    chunkDiv.style.borderRadius = '4px';
-                    chunkDiv.style.borderLeft = '3px solid var(--accent-color)';
-
-                    const levelBadge = chunk.level ? `[${chunk.level}]` : '';
-                    chunkDiv.innerHTML = `
-                        <div style="font-weight:bold; color:#00a884; margin-bottom:3px;">
-                            📄 Chunk ${chunk.index} ${levelBadge} - ${chunk.source || 'unknown'}
-                        </div>
-                        <div style="opacity:0.8; font-style:italic;">
-                            "${chunk.preview}"
-                        </div>
-                    `;
-                    chunksContainer.appendChild(chunkDiv);
+                    chunkDiv.classList.add('rag-chunk');
+                    chunkDiv.textContent = `"${chunk.preview || chunk.substring(0, 100)}..."`;
+                    ragDiv.appendChild(chunkDiv);
                 });
-
-                msgDiv.appendChild(chunksContainer);
-            } else {
-                // Fallback to old display if no chunks detail
-                const contentDiv = document.createElement('div');
-                contentDiv.style.fontSize = '0.9em';
-                contentDiv.style.fontStyle = 'italic';
-                contentDiv.style.opacity = '0.8';
-                contentDiv.textContent = '"' + (content ? content.substring(0, 150) : '') + '..."';
-                msgDiv.appendChild(contentDiv);
             }
 
-            chatContainer.appendChild(msgDiv);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
+            textDiv.appendChild(ragDiv);
         }
 
-        let currentAIMessageDiv = null; // To hold the div for streaming AI responses
-        let currentModelName = null;    // Current model being used
+        function addMetrics(metrics) {
+            const row = document.createElement('div');
+            row.classList.add('metrics-row');
 
-        function addMessage(text, sender, agentName = null, modelName = null) {
-            const messageDiv = document.createElement('div');
-            messageDiv.classList.add('message', sender);
+            const items = [
+                { icon: '⏱️', label: 'STT', value: metrics.stt },
+                { icon: '🧠', label: 'LLM', value: metrics.llm },
+                { icon: '🔊', label: 'TTS', value: metrics.tts || metrics.ttfa },
+                { icon: '⚡', label: 'Total', value: metrics.total }
+            ];
 
-            let contentHtml = `<span class="content">${text}</span>`;
-            if (sender === 'ai' && agentName) {
-                let badgeClass = 'general-badge';
-                if (agentName === 'MATH') badgeClass = 'math-badge';
-                else if (agentName === 'PHYSICS') badgeClass = 'physics-badge';
-                else if (agentName === 'ENGLISH') badgeClass = 'english-badge';
-
-                const modelLabel = modelName ? ` (${modelName})` : '';
-                contentHtml = `<span class="agent-badge ${badgeClass}">${agentName}${modelLabel}</span> ` + contentHtml;
-            }
-
-            messageDiv.innerHTML = contentHtml;
-            chatContainer.appendChild(messageDiv);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-            return messageDiv;
-        }
-
-        function updateCurrentAIMessage(chunk, agentName = null, modelName = null) {
-            if (!currentAIMessageDiv) {
-                currentAIMessageDiv = addMessage(chunk, 'ai', agentName, modelName);
-                currentModelName = modelName;
-            } else {
-                // Find the content span and append the chunk
-                const contentSpan = currentAIMessageDiv.querySelector('.content');
-                if (contentSpan) {
-                    contentSpan.textContent += chunk;
-                } else {
-                    // If for some reason content span is missing, just append to the div
-                    currentAIMessageDiv.textContent += chunk;
+            items.forEach(item => {
+                if (item.value !== undefined) {
+                    const div = document.createElement('div');
+                    div.classList.add('metric-item');
+                    div.innerHTML = `${item.icon} ${item.label}: ${item.value.toFixed(2)}s`;
+                    row.appendChild(div);
                 }
-            }
-            chatContainer.scrollTop = chatContainer.scrollHeight;
+            });
+
+            chatContainer.appendChild(row);
+            currentMessageRow = null;
         }
 
         function toggleConnection() {
@@ -379,14 +536,11 @@
         }
 
         function startConnection() {
-            statusIndicator.className = ''; // Reset
-
-            ws = new WebSocket('ws://' + window.location.hostname + ':8001/ws/audio');
+            ws = new WebSocket('ws://' + window.location.hostname + ':' + window.location.port + '/ws/audio');
 
             ws.onopen = async () => {
                 console.log("Connected");
-                statusIndicator.classList.add('connected');
-                statusIndicator.classList.add('listening'); // Assume listening immediately
+                statusDot.className = 'status-dot connected listening';
                 micBtn.classList.add('active');
                 micBtn.textContent = '⏹️';
                 isRunning = true;
@@ -415,7 +569,6 @@
                     window.localStream = stream;
                     window.localAudioContext = audioContext;
                     window.localProcessor = processor;
-
                 } catch (err) {
                     console.error("Mic Error:", err);
                     stopConnection();
@@ -423,19 +576,16 @@
                 }
             };
 
-            // ========================================
-            // AUDIO PLAYER CLASS - Sequential Playback
-            // ========================================
+            // Audio Player
             class AudioPlayer {
                 constructor() {
-                    this.queue = [];              // Buffer of {index, blob}
-                    this.nextExpectedIndex = 0;   // Next index to play
+                    this.queue = [];
+                    this.nextExpectedIndex = 0;
                     this.isPlaying = false;
                     this.currentAudio = null;
                 }
 
                 reset() {
-                    console.log("AudioPlayer: resetting");
                     if (this.currentAudio) {
                         this.currentAudio.pause();
                         this.currentAudio = null;
@@ -446,42 +596,24 @@
                 }
 
                 enqueue(index, blob) {
-                    console.log(`AudioPlayer: enqueue index=${index}`);
                     this.queue.push({ index, blob });
-                    // Sort by index to ensure order
                     this.queue.sort((a, b) => a.index - b.index);
                     this.tryPlayNext();
                 }
 
                 async tryPlayNext() {
-                    // Already playing something
-                    if (this.isPlaying) {
-                        console.log("AudioPlayer: already playing, will continue later");
-                        return;
-                    }
-
-                    // Find the chunk with the expected index
+                    if (this.isPlaying) return;
                     const nextChunk = this.queue.find(c => c.index === this.nextExpectedIndex);
-                    if (!nextChunk) {
-                        console.log(`AudioPlayer: waiting for index=${this.nextExpectedIndex}, have: ${this.queue.map(c => c.index).join(',')}`);
-                        return;
-                    }
+                    if (!nextChunk) return;
 
-                    // Remove it from queue
                     this.queue = this.queue.filter(c => c.index !== nextChunk.index);
-
                     this.isPlaying = true;
 
                     try {
-                        console.log(`AudioPlayer: playing index=${nextChunk.index}`);
                         await this.playBlob(nextChunk.blob);
-                        console.log(`AudioPlayer: finished index=${nextChunk.index}`);
-                    } catch (e) {
-                        console.error(`AudioPlayer: error playing index=${nextChunk.index}`, e);
                     } finally {
                         this.isPlaying = false;
                         this.nextExpectedIndex++;
-                        // Try to play next chunk
                         this.tryPlayNext();
                     }
                 }
@@ -491,114 +623,62 @@
                         const url = URL.createObjectURL(blob);
                         const audio = new Audio(url);
                         this.currentAudio = audio;
-
-                        audio.onended = () => {
-                            URL.revokeObjectURL(url);
-                            this.currentAudio = null;
-                            resolve();
-                        };
-
-                        audio.onerror = (e) => {
-                            URL.revokeObjectURL(url);
-                            this.currentAudio = null;
-                            reject(e);
-                        };
-
-                        audio.play().catch((e) => {
-                            URL.revokeObjectURL(url);
-                            this.currentAudio = null;
-                            reject(e);
-                        });
+                        audio.onended = () => { URL.revokeObjectURL(url); resolve(); };
+                        audio.onerror = (e) => { URL.revokeObjectURL(url); reject(e); };
+                        audio.play().catch(reject);
                     });
                 }
             }
 
             const audioPlayer = new AudioPlayer();
-            let pendingAudioIndex = null;  // To pair metadata with blob
+            let pendingAudioIndex = null;
 
             ws.onmessage = (event) => {
-                // Binary data = audio blob
                 if (event.data instanceof Blob) {
                     if (pendingAudioIndex !== null) {
                         audioPlayer.enqueue(pendingAudioIndex, event.data);
                         pendingAudioIndex = null;
-                    } else {
-                        console.warn("Received audio blob without metadata");
-                        // Fallback: assume next index
-                        audioPlayer.enqueue(audioPlayer.nextExpectedIndex + audioPlayer.queue.length, event.data);
                     }
                 } else {
                     try {
                         const msg = JSON.parse(event.data);
 
                         if (msg.type === 'audio_reset') {
-                            // New response starting, reset the player
                             audioPlayer.reset();
                             pendingAudioIndex = null;
-
                         } else if (msg.type === 'audio_chunk_meta') {
-                            // Next blob will have this index
                             pendingAudioIndex = msg.index;
-                            console.log(`Expecting audio chunk index=${msg.index}: "${msg.text}"`);
-
                         } else if (msg.type === 'user_text') {
                             addMessage(msg.content, 'user');
-                            currentAIMessageDiv = null;
-
-                        } else if (msg.type === 'ai_text') {
-                            if (currentAIMessageDiv) {
-                                const contentSpan = currentAIMessageDiv.querySelector('.content');
-                                if (contentSpan) contentSpan.textContent = msg.content;
-                            } else {
-                                addMessage(msg.content, 'ai', msg.agent, msg.model);
-                            }
-                            currentAIMessageDiv = null;
-
+                            currentMessageRow = null;
                         } else if (msg.type === 'ai_text_chunk') {
                             updateCurrentAIMessage(msg.content, msg.agent, msg.model);
-
                         } else if (msg.type === 'rag_sources') {
                             addSource(msg.source, msg.content, msg.agent, msg.chunks || [], msg.chunks_count || 0);
-
                         } else if (msg.type === 'latency_metrics') {
                             addMetrics(msg.data);
                         }
                     } catch (e) {
-                        console.log("Received text:", event.data);
+                        console.log("Parse error:", e);
                     }
                 }
             };
 
-            ws.onclose = () => {
-                console.log("Disconnected");
-                stopConnection();
-            };
-
-            ws.onerror = (err) => {
-                console.error("WS Error", err);
-                stopConnection();
-            };
+            ws.onclose = () => stopConnection();
+            ws.onerror = () => stopConnection();
         }
 
         function stopConnection() {
             isRunning = false;
             micBtn.classList.remove('active');
             micBtn.textContent = '🎤';
-            statusIndicator.className = '';
+            statusDot.className = 'status-dot';
+            modelBadge.textContent = 'Assistant';
 
-            if (window.localStream) {
-                window.localStream.getTracks().forEach(track => track.stop());
-            }
-            if (window.localProcessor) {
-                window.localProcessor.disconnect();
-                window.localProcessor.onaudioprocess = null;
-            }
-            if (window.localAudioContext) {
-                window.localAudioContext.close();
-            }
-            if (ws) {
-                ws.close();
-            }
+            if (window.localStream) window.localStream.getTracks().forEach(t => t.stop());
+            if (window.localProcessor) { window.localProcessor.disconnect(); window.localProcessor.onaudioprocess = null; }
+            if (window.localAudioContext) window.localAudioContext.close();
+            if (ws) ws.close();
         }
 
         micBtn.onclick = toggleConnection;
