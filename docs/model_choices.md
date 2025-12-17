@@ -26,7 +26,7 @@ Utiliser des modèles LLM spécialisés pour chaque matière afin d'améliorer l
 
 | Matière | Modèle Ollama | Base commune avec HF |
 |---------|--------------|---------------------|
-| **Mathématiques** | `qwen2-math:1.5b` | Modèle Qwen spécialisé math (même famille qu'AceMath) |
+| **Mathématiques** | `qwen2.5:1.5b` | Modèle Qwen spécialisé math (même famille qu'AceMath) |
 | **Physique** | `llama3.2:1b` | Même architecture Llama 3.2 |
 | **Anglais** | `qwen2.5:1.5b` | Modèle Qwen2.5 original |
 
@@ -36,7 +36,7 @@ Utiliser des modèles LLM spécialisés pour chaque matière afin d'améliorer l
 
 ```bash
 # Télécharger les modèles spécialisés
-ollama pull qwen2-math:1.5b      # Pour les mathématiques (spécialisé)
+ollama pull qwen2.5:1.5b      # Pour les mathématiques (spécialisé)
 ollama pull llama3.2:1b          # Pour la physique
 ollama pull qwen2.5:1.5b         # Pour l'anglais
 ```
