@@ -495,7 +495,8 @@
                 chunks.slice(0, 3).forEach(chunk => {
                     const chunkDiv = document.createElement('div');
                     chunkDiv.classList.add('rag-chunk');
-                    chunkDiv.textContent = `"${chunk.preview || chunk.substring(0, 100)}..."`;
+                    const ref = chunk.source ? `[${chunk.source}${chunk.page ? ', p.' + chunk.page : ''}] ` : '';
+                    chunkDiv.textContent = `${ref}"${chunk.preview || chunk.substring(0, 100)}..."`;
                     ragDiv.appendChild(chunkDiv);
                 });
             }

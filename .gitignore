@@ -12,7 +12,8 @@ dist/
 build/
 
 # Data directories
-data/chroma_db/
+data/rag_index/
+data/benchmark_tmp/
 data/logs/
 
 # Models (large files)

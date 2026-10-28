@@ -1,7 +1,8 @@
 """
 RAG Configuration Definitions
 
-Defines configurations for RAG benchmarking and production use.
+Defines the configurations compared by the benchmark. Each one is a point in the
+design space: embedding model x chunking x (BM25 fusion) x (cross-encoder re-ranking).
 """
 
 from dataclasses import dataclass
@@ -16,86 +17,40 @@ class RAGConfig:
     chunk_size: int
     chunk_overlap: int
     top_k: int
-    
+    use_hybrid: bool = False      # fuse BM25 with the dense ranking (RRF)
+    use_reranker: bool = False    # re-rank candidates with the cross-encoder
+
     def __str__(self):
-        return f"{self.name} (chunk={self.chunk_size}, k={self.top_k})"
+        return (f"{self.name} (chunk={self.chunk_size}, k={self.top_k}, "
+                f"hybrid={self.use_hybrid}, rerank={self.use_reranker})")
 
 
 # Embedding models available
 EMBEDDING_MODELS = {
-    "minilm": "all-MiniLM-L6-v2",  # Fast, English-focused
-    "multilingual": "paraphrase-multilingual-MiniLM-L12-v2",  # Multi-language (recommended)
-    "camembert": "dangvantuan/sentence-camembert-base",  # French-specific (slower)
+    "minilm_legacy": "paraphrase-multilingual-MiniLM-L12-v2",  # previous model, kept as baseline
+    "e5_small": "intfloat/multilingual-e5-small",  # default
+    "e5_base": "intfloat/multilingual-e5-base",    # larger, optional
 }
 
-# Configurations to benchmark
-BENCHMARK_CONFIGS = [
-    RAGConfig(
-        name="baseline",
-        embedding_model=EMBEDDING_MODELS["minilm"],
-        chunk_size=500,
-        chunk_overlap=50,
-        top_k=5
-    ),
-    RAGConfig(
-        name="multilingual",
-        embedding_model=EMBEDDING_MODELS["multilingual"],
-        chunk_size=500,
-        chunk_overlap=50,
-        top_k=5
-    ),
-    RAGConfig(
-        name="small_chunks",
-        embedding_model=EMBEDDING_MODELS["minilm"],
-        chunk_size=250,
-        chunk_overlap=25,
-        top_k=5
-    ),
-    RAGConfig(
-        name="large_chunks",
-        embedding_model=EMBEDDING_MODELS["minilm"],
-        chunk_size=1000,
-        chunk_overlap=100,
-        top_k=5
-    ),
-    RAGConfig(
-        name="more_context",
-        embedding_model=EMBEDDING_MODELS["minilm"],
-        chunk_size=500,
-        chunk_overlap=50,
-        top_k=10
-    ),
-    RAGConfig(
-        name="less_context",
-        embedding_model=EMBEDDING_MODELS["minilm"],
-        chunk_size=500,
-        chunk_overlap=50,
-        top_k=3
-    ),
-    RAGConfig(
-        name="multilingual_small",
-        embedding_model=EMBEDDING_MODELS["multilingual"],
-        chunk_size=250,
-        chunk_overlap=25,
-        top_k=5
-    ),
-    RAGConfig(
-        name="multilingual_more_k",
-        embedding_model=EMBEDDING_MODELS["multilingual"],
-        chunk_size=500,
-        chunk_overlap=50,
-        top_k=10
-    ),
-]
+_E5S = EMBEDDING_MODELS["e5_small"]
+_E5B = EMBEDDING_MODELS["e5_base"]
 
-# CamemBERT config (French-specific, slower)
-CAMEMBERT_CONFIG = RAGConfig(
-    name="camembert_fr",
-    embedding_model=EMBEDDING_MODELS["camembert"],
-    chunk_size=500,
-    chunk_overlap=50,
-    top_k=5
-)
+# Configurations to benchmark. Configs sharing (embedding, chunking) share one FAISS index.
+BENCHMARK_CONFIGS = [
+    # Baseline: previous embedding model, now served by FAISS (dense only)
+    RAGConfig("minilm_dense", EMBEDDING_MODELS["minilm_legacy"], 500, 50, 5),
+    # E5-small ablation: each component added in turn
+    RAGConfig("e5_small_dense", _E5S, 500, 50, 5),
+    RAGConfig("e5_small_hybrid", _E5S, 500, 50, 5, use_hybrid=True),
+    RAGConfig("e5_small_rerank", _E5S, 500, 50, 5, use_reranker=True),
+    RAGConfig("e5_small_hybrid_rerank", _E5S, 500, 50, 5, use_hybrid=True, use_reranker=True),
+    # Chunk size sensitivity (full pipeline)
+    RAGConfig("e5_small_hybrid_rerank_c250", _E5S, 250, 25, 5, use_hybrid=True, use_reranker=True),
+    RAGConfig("e5_small_hybrid_rerank_c1000", _E5S, 1000, 100, 5, use_hybrid=True, use_reranker=True),
+    # E5-base option
+    RAGConfig("e5_base_dense", _E5B, 500, 50, 5),
+    RAGConfig("e5_base_rerank", _E5B, 500, 50, 5, use_reranker=True),
+]
 
 
 def get_config_by_name(name: str) -> Optional[RAGConfig]:
@@ -103,11 +58,9 @@ def get_config_by_name(name: str) -> Optional[RAGConfig]:
     for config in BENCHMARK_CONFIGS:
         if config.name == name:
             return config
-    if name == "camembert_fr":
-        return CAMEMBERT_CONFIG
     return None
 
 
 def list_configs() -> list:
     """List all available configuration names"""
-    return [c.name for c in BENCHMARK_CONFIGS] + ["camembert_fr"]
+    return [c.name for c in BENCHMARK_CONFIGS]

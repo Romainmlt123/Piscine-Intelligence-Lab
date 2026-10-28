@@ -127,7 +127,7 @@
         "numérateur",
         "dénominateur"
       ],
-      "expected_source_pattern": "bases_calcul|N"
+      "expected_source_pattern": "bases_calcul|_N[123]_"
     },
     {
       "id": "math_011",

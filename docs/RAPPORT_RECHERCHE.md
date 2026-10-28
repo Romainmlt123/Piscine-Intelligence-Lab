@@ -55,7 +55,7 @@ Les tuteurs humains sont coûteux et limités en disponibilité. Les chatbots g�
 |-----------|-------------|------|
 | **STT** | Whisper (base) | Transcription vocale |
 | **Routing** | Classification par mots-clés | Sélection de l'agent |
-| **RAG** | ChromaDB + Hybrid Search | Récupération de contexte |
+| **RAG** | FAISS + E5 + cross-encoder | Récupération de contexte |
 | **LLM** | Ollama (qwen2.5, llama3.2, gemma) | Génération de réponse |
 | **TTS** | Piper | Synthèse vocale |
 

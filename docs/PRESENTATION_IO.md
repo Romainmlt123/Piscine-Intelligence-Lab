@@ -183,7 +183,7 @@
 │             ┌───────────┐         ┌───────────┐         ┌─────────┐│
 │             │   MATH    │         │  PHYSICS  │         │ ENGLISH ││
 │             │           │         │           │         │         ││
-│             │ ChromaDB  │         │ ChromaDB  │         │ChromaDB ││
+│             │ FAISS     │         │ FAISS     │         │FAISS    ││
 │             │ 994 chunks│         │1640 chunks│         │ 6 chunks││
 │             │           │         │           │         │         ││
 │             │ + BM25    │         │ + BM25    │         │ + BM25  ││

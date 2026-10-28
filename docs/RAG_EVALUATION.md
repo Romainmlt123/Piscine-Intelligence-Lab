@@ -1,5 +1,7 @@
 # Évaluation et Benchmark du RAG
 
+> ⚠️ **Document historique.** Les résultats ci-dessous concernent l'ancien pipeline (ChromaDB + `paraphrase-multilingual-MiniLM-L12-v2`, sans reranking). Le pipeline actuel (FAISS + E5 + cross-encoder) se mesure avec `python -m src.rag.rag_benchmark --run`.
+
 ## Vue d'ensemble
 
 Ce rapport présente les résultats de l'évaluation de 8 configurations RAG différentes sur un dataset de 15 questions couvrant les mathématiques, la physique et l'anglais.

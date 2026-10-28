@@ -75,10 +75,10 @@
 │        ┌──────────┐    ┌──────────┐    ┌──────────┐                │
 │        │   MATH   │    │ PHYSICS  │    │ ENGLISH  │                │
 │        │          │    │          │    │          │                │
-│        │ ChromaDB │    │ ChromaDB │    │ ChromaDB │                │
-│        │ 994 docs │    │1640 docs │    │  6 docs  │                │
+│        │  FAISS   │    │  FAISS   │    │  FAISS   │                │
+│        │ E5 + BM25│    │ E5 + BM25│    │ E5 + BM25│                │
 │        │          │    │          │    │          │                │
-│        │ + BM25   │    │ + BM25   │    │ + BM25   │                │
+│        │+ rerank  │    │+ rerank  │    │+ rerank  │                │
 │        │          │    │          │    │          │                │
 │        │ qwen2.5  │    │ llama3.2 │    │  gemma   │                │
 │        │  :1.5b   │    │   :1b    │    │   :2b    │                │
@@ -93,9 +93,10 @@
 |-----------|------------|---------|
 | **Backend** | FastAPI + Uvicorn | WebSocket server, async streaming |
 | **STT** | OpenAI Whisper (base) | Speech-to-text transcription |
-| **Embeddings** | sentence-transformers | `paraphrase-multilingual-MiniLM-L12-v2` |
-| **Vector DB** | ChromaDB | Persistent vector storage |
-| **Keyword Search** | rank-bm25 | BM25 for hybrid retrieval |
+| **Embeddings** | sentence-transformers | `intfloat/multilingual-e5-small` (default), `multilingual-e5-base` (option) |
+| **Vector index** | FAISS (`IndexFlatIP`) | Exact cosine search, persisted on disk |
+| **Re-ranking** | `CrossEncoder` | Rescoring of the retrieved candidates (`mmarco-mMiniLMv2`) |
+| **Keyword Search** | rank-bm25 | Optional BM25 fusion (RRF) |
 | **LLM** | Ollama | Local inference (Qwen, Llama, Gemma) |
 | **TTS** | Piper | Neural text-to-speech (French) |
 | **Frontend** | Vanilla HTML/CSS/JS | ChatGPT-style interface |
@@ -104,22 +105,27 @@
 
 ## 📊 Performance
 
-### RAG Benchmark (20 test queries)
+### RAG Benchmark
 
-| Metric | Baseline | After Optimization | Improvement |
-|--------|----------|-------------------|-------------|
-| **Hit Rate** | 46.7% | **80.0%** | +71% 🚀 |
-| **MRR** | 0.413 | **0.717** | +74% 🚀 |
-| **Latency** | 25ms | 27ms | +2ms only |
+The retrieval stack was migrated from ChromaDB + MiniLM to FAISS + E5 + cross-encoder re-ranking.
+Results of the previous stack (hit rate 46.7% → 80.0%) are kept for history in
+[docs/RAG_EVALUATION.md](docs/RAG_EVALUATION.md) and **do not apply to the current pipeline**.
 
-### Optimization Journey
+Reproduce the measurements of the current pipeline (20 queries, ablation dense / hybrid / re-ranking):
 
+```bash
+python -m src.rag.download_models --e5-base   # once, needs network access
+python -m src.rag.rag_benchmark --run
+python -m src.rag.rag_benchmark --report
 ```
-Iteration 1: Baseline vector search         → 46.7%
-Iteration 2: Multilingual embeddings        → 53.3%
-Iteration 3: Cleaned corrupted PDFs         → 60.0%
-Iteration 4: Hybrid Search (BM25 + Vector)  → 80.0% ✅
-```
+
+The benchmark reports keyword hit / MRR, source hit / MRR, mean and p95 latency, and the environment.
+
+### Fully local runtime
+
+After `python -m src.rag.download_models`, set `RAG_OFFLINE=1`: no request is made to the
+Hugging Face Hub, and the RAG makes no network call at runtime.
+Settings: `RAG_EMBEDDING_MODEL`, `RAG_RERANKER_MODEL`, `RAG_USE_RERANKER`, `RAG_RERANK_CANDIDATES`.
 
 ---
 
@@ -178,7 +184,7 @@ Open **http://localhost:8001** and click the microphone! 🎤
 │   │   ├── orchestrator.py  # Multi-agent routing
 │   │   └── llm_module.py    # Ollama wrapper
 │   ├── rag/
-│   │   ├── rag_module.py    # Hybrid RAG (Vector + BM25)
+│   │   ├── rag_module.py    # RAG: FAISS + E5 + cross-encoder re-ranking
 │   │   └── rag_benchmark.py # Performance testing
 │   └── speech/
 │       ├── stt_module.py    # Whisper STT

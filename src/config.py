@@ -21,8 +21,18 @@ DATA_DIR = BASE_DIR / "data"
 PIPER_DIR = MODELS_DIR / "piper"
 PIPER_MODEL = os.getenv("PIPER_MODEL", str(PIPER_DIR / "fr_FR-upmc-medium.onnx"))
 
-# ChromaDB
-CHROMA_DB_DIR = str(DATA_DIR / "chroma_db")
+# RAG (FAISS index + E5 embeddings + cross-encoder re-ranking)
+RAG_INDEX_DIR = str(DATA_DIR / "rag_index")
+RAG_EMBEDDING_MODEL = os.getenv("RAG_EMBEDDING_MODEL", "intfloat/multilingual-e5-small")  # or intfloat/multilingual-e5-base
+RAG_RERANKER_MODEL = os.getenv("RAG_RERANKER_MODEL", "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1")
+RAG_USE_RERANKER = os.getenv("RAG_USE_RERANKER", "1") == "1"
+RAG_RERANK_CANDIDATES = int(os.getenv("RAG_RERANK_CANDIDATES", "20"))
+# Fully local runtime: never contact the Hugging Face Hub (models must already be cached,
+# see `python -m src.rag.download_models`).
+RAG_OFFLINE = os.getenv("RAG_OFFLINE", "0") == "1"
+if RAG_OFFLINE:
+    os.environ.setdefault("HF_HUB_OFFLINE", "1")
+    os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
 
 # Whisper STT
 WHISPER_MODEL = os.getenv("WHISPER_MODEL", "base")

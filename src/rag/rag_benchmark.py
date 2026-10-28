@@ -1,33 +1,41 @@
 """
-RAG Benchmark Script (Simplified)
+RAG Benchmark
 
-This script evaluates RAG configurations using the actual RAG module.
-No code duplication - uses rag_module.py directly.
+Evaluates RAG configurations using the actual RAG module (FAISS + E5 + cross-encoder).
+Configurations that share the same embedding model and chunking share one index, so
+the dense / hybrid / re-ranked variants are compared on exactly the same chunks.
+
+Two relevance criteria are reported for each query:
+- keyword hit : >= 40% of `expected_keywords` appear in a retrieved chunk (lenient)
+- source hit  : a retrieved chunk comes from a document matching
+                `expected_source_pattern` (stricter on provenance, blind to the passage)
 
 Usage:
     python -m src.rag.rag_benchmark --run
-    python -m src.rag.rag_benchmark --run --config multilingual
+    python -m src.rag.rag_benchmark --run --config e5_small_hybrid_rerank
     python -m src.rag.rag_benchmark --report
 """
 
 import json
-import time
 import logging
+import os
+import platform
+import re
 import shutil
-from pathlib import Path
-from dataclasses import dataclass, asdict
-from typing import List, Optional
-from datetime import datetime
 import sys
+import time
+from collections import OrderedDict
+from dataclasses import dataclass, asdict
+from datetime import datetime
+from pathlib import Path
+from typing import List, Optional
 
-# Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from rag.rag_module import RAGModule
 from rag.rag_configs import BENCHMARK_CONFIGS, RAGConfig, get_config_by_name
-from config import KNOWLEDGE_BASE_DIR, DATA_DIR
+from config import KNOWLEDGE_BASE_DIR, DATA_DIR, RAG_RERANKER_MODEL, RAG_RERANK_CANDIDATES
 
-# Setup logging
 logging.basicConfig(level=logging.INFO, format='%(message)s')
 logger = logging.getLogger(__name__)
 
@@ -36,196 +44,224 @@ logger = logging.getLogger(__name__)
 class BenchmarkResult:
     """Aggregated results for a configuration"""
     config_name: str
-    hit_rate: float
-    mrr: float
+    num_queries: int
+    keyword_hits: int
+    source_hits: int
+    keyword_mrr: float
+    source_mrr: float
     avg_retrieval_time_ms: float
-    total_ingestion_time_s: float
+    p95_retrieval_time_ms: float
+    index_build_time_s: float  # time to extract + chunk + embed + index (shared by configs of a group)
     num_chunks: int
     details: List[dict]
 
+    @property
+    def keyword_hit_rate(self) -> float:
+        return self.keyword_hits / self.num_queries
+
+    @property
+    def source_hit_rate(self) -> float:
+        return self.source_hits / self.num_queries
+
+
+def _environment() -> dict:
+    import faiss
+    import sentence_transformers
+    import torch
+    return {
+        "python": platform.python_version(),
+        "platform": platform.platform(),
+        "cpu_count": os.cpu_count(),
+        "gpu": torch.cuda.is_available(),
+        "faiss": faiss.__version__,
+        "sentence_transformers": sentence_transformers.__version__,
+        "torch": torch.__version__,
+        "reranker_model": RAG_RERANKER_MODEL,
+        "rerank_candidates": RAG_RERANK_CANDIDATES,
+    }
+
 
 class RAGBenchmark:
-    """
-    Simplified benchmark using the actual RAG module.
-    No code duplication - single source of truth for RAG logic.
-    """
-    
+    """Benchmark driven by the real RAG module (single source of truth for RAG logic)."""
+
     def __init__(self, knowledge_base_dir: str = None):
         self.knowledge_base_dir = knowledge_base_dir or str(KNOWLEDGE_BASE_DIR)
         self.results_dir = Path(DATA_DIR) / "benchmark_results"
         self.results_dir.mkdir(parents=True, exist_ok=True)
-        
-        # Load test queries
+
         queries_path = Path(__file__).parent / "test_queries.json"
         with open(queries_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-            self.test_queries = data['queries']
-        
+            self.test_queries = json.load(f)['queries']
         logger.info(f"Loaded {len(self.test_queries)} test queries")
-    
-    def run_config(self, config: RAGConfig) -> BenchmarkResult:
-        """Run benchmark for a single configuration using the real RAG module"""
-        logger.info(f"\n{'='*60}")
-        logger.info(f"Testing config: {config.name}")
-        logger.info(f"  Embedding: {config.embedding_model}")
-        logger.info(f"  Chunk size: {config.chunk_size}, Top-k: {config.top_k}")
-        logger.info(f"{'='*60}")
-        
-        # Create temporary directory for this benchmark
-        temp_db_path = Path(DATA_DIR) / f"benchmark_temp_{config.name}"
-        shutil.rmtree(temp_db_path, ignore_errors=True)
-        
-        # Initialize RAG module with this config's settings
-        start_ingest = time.time()
+
+    # ------------------------------------------------------------------ #
+
+    def run_group(self, configs: List[RAGConfig], reranker=None) -> List[BenchmarkResult]:
+        """Build one index for configs sharing (embedding, chunking), then evaluate each."""
+        first = configs[0]
+        logger.info(f"\n{'=' * 60}\nIndex: {first.embedding_model} (chunk={first.chunk_size}, overlap={first.chunk_overlap})\n{'=' * 60}")
+
+        tmp_path = Path(DATA_DIR) / "benchmark_tmp" / re.sub(r"\W+", "_", f"{first.embedding_model}_{first.chunk_size}")
+        shutil.rmtree(tmp_path, ignore_errors=True)
+
+        start = time.perf_counter()
         rag = RAGModule(
-            collection_name=f"benchmark_{config.name}",
-            persistence_path=str(temp_db_path),
-            chunk_size=config.chunk_size,
-            chunk_overlap=config.chunk_overlap
+            collection_name="benchmark",
+            persistence_path=str(tmp_path),
+            chunk_size=first.chunk_size,
+            chunk_overlap=first.chunk_overlap,
+            embedding_model=first.embedding_model,
+            reranker=reranker,
         )
-        
-        # Temporarily override embedding model if different
-        if config.embedding_model != rag.embedder.get_sentence_embedding_dimension():
-            from sentence_transformers import SentenceTransformer
-            rag.embedder = SentenceTransformer(config.embedding_model)
-        
-        # Ingest using the real RAG module
-        rag.ingest(self.knowledge_base_dir)
-        ingestion_time = time.time() - start_ingest
-        
-        num_chunks = rag.collection.count()
-        logger.info(f"Ingested {num_chunks} chunks in {ingestion_time:.1f}s")
-        
-        # Run test queries
-        logger.info("Running test queries...")
-        results = []
-        
+        rag.ingest(self.knowledge_base_dir, force=True)
+        build_time = time.perf_counter() - start
+        logger.info(f"Indexed {len(rag.chunks)} chunks in {build_time:.1f}s")
+
+        results = [self._evaluate(rag, c, build_time) for c in configs]
+        shutil.rmtree(tmp_path, ignore_errors=True)
+        return results
+
+    def _evaluate(self, rag: RAGModule, config: RAGConfig, build_time: float) -> BenchmarkResult:
+        logger.info(f"\n--- {config} ---")
+        # Warm-up: first call pays lazy model loading / allocator costs, not part of the latency
+        rag.retrieve(self.test_queries[0]['question'], n_results=config.top_k,
+                     use_hybrid=config.use_hybrid, use_reranker=config.use_reranker)
+
+        details = []
         for q in self.test_queries:
-            start = time.time()
-            docs, metas = rag.retrieve(q['question'], n_results=config.top_k)
-            elapsed = (time.time() - start) * 1000
-            
-            # Check hit based on keywords
-            expected_keywords = [kw.lower() for kw in q.get('expected_keywords', [])]
-            hit, rank = self._check_hit(docs, expected_keywords)
-            
-            status = "✅" if hit else "❌"
-            logger.info(f"  {status} {q['id']}: rank={rank}, time={elapsed:.0f}ms")
-            
-            results.append({
-                'query_id': q['id'],
-                'hit': hit,
-                'rank': rank,
-                'time_ms': elapsed
+            start = time.perf_counter()
+            docs, metas = rag.retrieve(q['question'], n_results=config.top_k,
+                                       use_hybrid=config.use_hybrid, use_reranker=config.use_reranker)
+            elapsed_ms = (time.perf_counter() - start) * 1000
+
+            kw_rank = self._keyword_rank(docs, [k.lower() for k in q.get('expected_keywords', [])])
+            src_rank = self._source_rank(metas, q.get('expected_source_pattern'))
+            logger.info(f"  {q['id']}: keyword_rank={kw_rank} source_rank={src_rank} time={elapsed_ms:.0f}ms")
+            details.append({
+                'query_id': q['id'], 'keyword_rank': kw_rank, 'source_rank': src_rank,
+                'time_ms': elapsed_ms,
+                'sources': [f"{m['source']}#p{m.get('page')}" for m in metas],
             })
-        
-        # Calculate metrics
-        hits = sum(1 for r in results if r['hit'])
-        hit_rate = hits / len(results)
-        mrr = sum(1/r['rank'] if r['rank'] > 0 else 0 for r in results) / len(results)
-        avg_time = sum(r['time_ms'] for r in results) / len(results)
-        
-        # Cleanup
-        shutil.rmtree(temp_db_path, ignore_errors=True)
-        
-        logger.info(f"\nResults: Hit Rate={hit_rate*100:.1f}%, MRR={mrr:.3f}, Avg={avg_time:.1f}ms")
-        
-        return BenchmarkResult(
+
+        n = len(details)
+        times = sorted(d['time_ms'] for d in details)
+        result = BenchmarkResult(
             config_name=config.name,
-            hit_rate=hit_rate,
-            mrr=mrr,
-            avg_retrieval_time_ms=avg_time,
-            total_ingestion_time_s=ingestion_time,
-            num_chunks=num_chunks,
-            details=results
+            num_queries=n,
+            keyword_hits=sum(1 for d in details if d['keyword_rank'] > 0),
+            source_hits=sum(1 for d in details if d['source_rank'] > 0),
+            keyword_mrr=sum(1 / d['keyword_rank'] for d in details if d['keyword_rank'] > 0) / n,
+            source_mrr=sum(1 / d['source_rank'] for d in details if d['source_rank'] > 0) / n,
+            avg_retrieval_time_ms=sum(times) / n,
+            p95_retrieval_time_ms=times[min(n - 1, int(round(0.95 * n)) - 1)],
+            index_build_time_s=build_time,
+            num_chunks=len(rag.chunks),
+            details=details,
         )
-    
-    def _check_hit(self, docs: List[str], keywords: List[str]) -> tuple:
-        """Check if keywords are found in retrieved docs"""
+        logger.info(f"=> keyword {result.keyword_hits}/{n} (MRR {result.keyword_mrr:.3f}), "
+                    f"source {result.source_hits}/{n} (MRR {result.source_mrr:.3f}), "
+                    f"{result.avg_retrieval_time_ms:.1f}ms avg")
+        return result
+
+    @staticmethod
+    def _keyword_rank(docs: List[str], keywords: List[str]) -> int:
+        """1-based rank of the first chunk containing >= 40% of the keywords (0 if none)."""
         for i, doc in enumerate(docs):
             text = doc.lower()
-            matches = sum(1 for kw in keywords if kw in text)
-            if matches >= len(keywords) * 0.4:
-                return True, i + 1
-        return False, 0
-    
+            if sum(1 for kw in keywords if kw in text) >= len(keywords) * 0.4:
+                return i + 1
+        return 0
+
+    @staticmethod
+    def _source_rank(metas: List[dict], pattern: Optional[str]) -> int:
+        """1-based rank of the first chunk whose document matches the expected pattern (0 if none)."""
+        if not pattern:
+            return 0
+        for i, meta in enumerate(metas):
+            if re.search(pattern, meta['source']):
+                return i + 1
+        return 0
+
+    # ------------------------------------------------------------------ #
+
     def run_all(self, configs: List[RAGConfig] = None) -> List[BenchmarkResult]:
-        """Run benchmark for all configurations"""
+        """Run the benchmark for all configurations (grouped by shared index)."""
         configs = configs or BENCHMARK_CONFIGS
+
+        groups = OrderedDict()
+        for c in configs:
+            groups.setdefault((c.embedding_model, c.chunk_size, c.chunk_overlap), []).append(c)
+
+        reranker = None
+        if any(c.use_reranker for c in configs):
+            from sentence_transformers import CrossEncoder
+            reranker = CrossEncoder(RAG_RERANKER_MODEL, max_length=512)
+
         results = []
-        
-        for config in configs:
+        for group in groups.values():
             try:
-                result = self.run_config(config)
-                results.append(result)
+                results.extend(self.run_group(group, reranker=reranker))
                 self._save_results(results)
             except Exception as e:
-                logger.error(f"Error testing {config.name}: {e}")
-        
+                logger.error(f"Error testing group {group[0].embedding_model}: {e}")
         return results
-    
+
     def _save_results(self, results: List[BenchmarkResult]):
-        """Save results to JSON"""
-        output_path = self.results_dir / f"benchmark_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-        
         data = {
             "timestamp": datetime.now().isoformat(),
-            "results": [asdict(r) for r in results]
+            "environment": _environment(),
+            "results": [asdict(r) for r in results],
         }
-        
-        with open(output_path, 'w', encoding='utf-8') as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
-        
-        # Also save as latest
-        latest_path = self.results_dir / "latest_results.json"
-        with open(latest_path, 'w', encoding='utf-8') as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
-        
+        output_path = self.results_dir / f"benchmark_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        for path in (output_path, self.results_dir / "latest_results.json"):
+            with open(path, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
         logger.info(f"Results saved to {output_path}")
-    
+
     def generate_report(self) -> str:
-        """Generate markdown report"""
+        """Generate a markdown report from the latest results."""
         latest_path = self.results_dir / "latest_results.json"
         if not latest_path.exists():
             return "No results found. Run benchmark first."
-        
-        with open(latest_path, 'r') as f:
+        with open(latest_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
-        
-        results = sorted(data['results'], key=lambda x: x['hit_rate'], reverse=True)
-        
-        lines = ["# RAG Benchmark Results\n"]
-        lines.append(f"**Date**: {data['timestamp']}\n")
-        lines.append("\n| Config | Hit Rate | MRR | Time (ms) |")
-        lines.append("|--------|----------|-----|-----------|")
-        
-        for r in results:
-            lines.append(f"| {r['config_name']} | {r['hit_rate']*100:.1f}% | {r['mrr']:.3f} | {r['avg_retrieval_time_ms']:.1f} |")
-        
+
+        env = data.get('environment', {})
+        lines = ["# RAG Benchmark Results\n", f"**Date**: {data['timestamp']}  ",
+                 f"**Environment**: {json.dumps(env)}\n",
+                 "| Config | Keyword hit | Keyword MRR | Source hit | Source MRR | Latency avg / p95 (ms) | Chunks | Index build (s) |",
+                 "|--------|-------------|-------------|------------|------------|------------------------|--------|-----------------|"]
+        for r in data['results']:
+            n = r['num_queries']
+            lines.append(
+                f"| {r['config_name']} | {r['keyword_hits']}/{n} | {r['keyword_mrr']:.3f} | "
+                f"{r['source_hits']}/{n} | {r['source_mrr']:.3f} | "
+                f"{r['avg_retrieval_time_ms']:.1f} / {r['p95_retrieval_time_ms']:.1f} | "
+                f"{r['num_chunks']} | {r['index_build_time_s']:.1f} |")
+        lines.append(f"\n_{data['results'][0]['num_queries']} queries: differences of one or two queries are within noise._")
         return "\n".join(lines)
 
 
 def main():
     import argparse
-    
+
     parser = argparse.ArgumentParser(description="RAG Benchmark")
     parser.add_argument("--run", action="store_true", help="Run benchmark")
     parser.add_argument("--report", action="store_true", help="Generate report")
     parser.add_argument("--config", type=str, help="Specific config name")
-    
     args = parser.parse_args()
     benchmark = RAGBenchmark()
-    
+
     if args.run:
         if args.config:
             config = get_config_by_name(args.config)
-            if config:
-                benchmark.run_config(config)
-            else:
+            if not config:
                 logger.error(f"Config '{args.config}' not found")
+                sys.exit(1)
+            benchmark.run_all([config])
         else:
             benchmark.run_all()
-    
+
     if args.report:
         print(benchmark.generate_report())
 

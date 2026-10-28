@@ -233,6 +233,7 @@ class AgentOrchestrator:
                         'index': i + 1,
                         'source': meta.get('source', 'Inconnu'),
                         'level': meta.get('level', 'unknown'),
+                        'page': meta.get('page'),
                         'preview': chunk[:200] + "..." if len(chunk) > 200 else chunk
                     }
                     chunks_details.append(chunk_info)
